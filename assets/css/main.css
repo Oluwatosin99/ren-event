@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Smooth Vue Page & Component Transitions */
+.page-slide-enter-active,
+.page-slide-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.page-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.99);
+}
+.page-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.99);
+}
+
+.slide-fade-enter-active {
+  transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateX(18px);
+}
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-18px);
+}
+
+.pop-up-enter-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pop-up-leave-active {
+  transition: all 0.2s ease-in;
+}
+.pop-up-enter-from,
+.pop-up-leave-to {
+  opacity: 0;
+  transform: scale(0.92) translateY(10px);
+}
+
+/* Executive Dotted Workflow Grid */
+.flow-grid {
+  background-color: #0b0f19;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.18) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Animated SVG data flow lines */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+.edge-active {
+  stroke-dasharray: 6 6;
+  animation: flowDash 0.75s linear infinite;
+}
+
+/* QR Scanner laser animation */
+@keyframes scanLaser {
+  0%, 100% {
+    top: 10%;
+    opacity: 0.85;
+  }
+  50% {
+    top: 86%;
+    opacity: 1;
+  }
+}
+.scanner-laser {
+  animation: scanLaser 2.2s ease-in-out infinite;
+}
+
+/* Perforated Thermal Ticket Sawtooth Edge */
+.ticket-sawtooth-top {
+  background-image: radial-gradient(circle at 8px 0px, transparent 6px, #fffdf9 6.5px);
+  background-size: 16px 10px;
+}
+.ticket-sawtooth-bottom {
+  background-image: radial-gradient(circle at 8px 10px, transparent 6px, #fffdf9 6.5px);
+  background-size: 16px 10px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.75);
+}
+
+/* ========================================================================= */
+/* XPRINTER XP-80T THERMAL RECEIPT PRINT MEDIA RULES (79.5 ± 0.5mm / 80mm)   */
+/* ========================================================================= */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #xp80t-printable-ticket,
+  #xp80t-printable-ticket * {
+    visibility: visible;
+  }
+  #xp80t-printable-ticket {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 79.5mm !important;
+    max-width: 79.5mm !important;
+    padding: 3mm 4mm !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+

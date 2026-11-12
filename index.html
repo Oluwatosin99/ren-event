@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Renaissance Event Operations Suite — Architecture &amp; Live Prototype</title>
+    <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Executive Dotted Workflow Grid */
+        .flow-grid {
+            background-color: #0b0f19;
+            background-image: radial-gradient(rgba(148, 163, 184, 0.18) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+
+        /* Smooth camera panning and zooming */
+        .camera-transition {
+            transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Animated SVG data flow lines */
+        @keyframes flowDash {
+            to {
+                stroke-dashoffset: -24;
+            }
+        }
+
+        .edge-active {
+            stroke-dasharray: 6 6;
+            animation: flowDash 0.75s linear infinite;
+        }
+
+        /* Node states */
+        .node-card {
+            transition: all 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+            user-select: none;
+        }
+
+        .node-pending {
+            opacity: 0.38;
+            filter: grayscale(90%);
+        }
+
+        .node-active {
+            opacity: 1;
+            filter: grayscale(0%);
+            box-shadow: 0 0 0 3px #f59e0b, 0 16px 32px -6px rgba(245, 158, 11, 0.4);
+            transform: translateY(-3px) scale(1.03);
+        }
+
+        .node-passed {
+            opacity: 1;
+            filter: grayscale(0%);
+            box-shadow: 0 0 0 2px #10b981, 0 10px 24px -4px rgba(16, 185, 129, 0.22);
+        }
+
+        /* Green tick pulse */
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.22);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .tick-badge {
+            animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* QR Scanner laser animation */
+        @keyframes scanLaser {
+
+            0%,
+            100% {
+                top: 12%;
+                opacity: 0.9;
+            }
+
+            50% {
+                top: 84%;
+                opacity: 1;
+            }
+        }
+
+        .scanner-laser {
+            animation: scanLaser 2.2s ease-in-out infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.5);
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.8);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 antialiased overflow-hidden select-none font-sans">
+
+    <div class="relative w-full h-screen flex flex-col">
+
+        <!-- =================================================================== -->
+        <!-- TOP EXECUTIVE NAVIGATION HEADER                                     -->
+        <!-- =================================================================== -->
+        <header
+            class="z-30 flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-900/95 border-b border-slate-800 shadow-lg">
+            <!-- Brand Identity (Zero n8n references) -->
+            <div class="flex items-center gap-3.5">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-md shadow-amber-500/20 flex items-center justify-center text-slate-950 font-black text-lg tracking-tighter">
+                    RE
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5">
+                        <h1 class="font-bold text-base tracking-tight text-white">
+                            Renaissance Event Operations Suite
+                        </h1>
+                        <span
+                            class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            End of Year Party • 1,500+ Capacity
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        Unified Access Control (QR Scanner &amp; Post-Registration) + Smart Catering &amp; Kitchen Order
+                        Processing
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher: Process Flow Canvas vs. Live Working Application -->
+            <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button onclick="switchMainView('flow')" id="tab-main-flow"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+                    <span>🗺️</span> 1. Interactive Process Flow
+                </button>
+                <button onclick="switchMainView('app')" id="tab-main-app"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                    <span>🚀</span> 2. Live App Prototype (Test All Screens)
+                </button>
+            </div>
+
+            <!-- Walkthrough Controls (Shown when in Process Flow Mode) -->
+            <div id="flow-toolbar" class="flex flex-wrap items-center gap-2">
+                <!-- Branch Filter -->
+                <div class="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+                    <span class="px-2 text-slate-400 font-medium">Branch:</span>
+                    <button onclick="setScenario('all')" id="btn-scen-all"
+                        class="px-2.5 py-1 rounded-md font-semibold bg-slate-800 text-amber-400 transition">Full Master
+                        Flow</button>
+                    <button onclick="setScenario('scanner')" id="btn-scen-scanner"
+                        class="px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition">App 1:
+                        Access QR</button>
+                    <button onclick="setScenario('food')" id="btn-scen-food"
+                        class="px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition">App 2:
+                        Food &amp; Kitchen</button>
+                </div>
+
+                <!-- Step Controls -->
+                <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    <button onclick="prevStep()"
+                        class="px-2.5 py-1 text-xs font-semibold rounded hover:bg-slate-800 text-slate-300 transition">
+                        ◀ Prev
+                    </button>
+                    <button onclick="toggleAutoPlay()" id="btn-play"
+                        class="px-3 py-1 text-xs font-bold rounded bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1 shadow">
+                        <span id="play-icon">▶</span> <span id="play-text">Present Flow</span>
+                    </button>
+                    <button onclick="nextStep()"
+                        class="px-2.5 py-1 text-xs font-semibold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition">
+                        Next Step ▶
+                    </button>
+                </div>
+
+                <!-- Quick State Actions -->
+                <div class="flex items-center gap-1">
+                    <button onclick="markAllPassed()"
+                        class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-950 border border-slate-800 hover:border-emerald-500/50 text-emerald-400 transition">
+                        ✓ Pass All
+                    </button>
+                    <button onclick="resetAll()"
+                        class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-950 border border-slate-800 hover:border-rose-500/50 text-rose-400 transition">
+                        ↺ Reset
+                    </button>
+                    <button onclick="fitOverview()"
+                        class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 transition">
+                        ⛶ Fit All
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 1: INTERACTIVE PROCESS FLOW ARCHITECTURE CANVAS                -->
+        <!-- =================================================================== -->
+        <div id="view-flow" class="relative flex-1 overflow-hidden flow-grid cursor-grab active:cursor-grabbing">
+
+            <!-- Transformable World Container -->
+            <div id="world" class="absolute top-0 left-0 origin-top-left camera-transition"
+                style="width: 2800px; height: 1550px;">
+
+                <!-- Zone 1 Banner -->
+                <div
+                    class="absolute left-[40px] top-[340px] w-[520px] h-[520px] rounded-3xl border-2 border-dashed border-blue-500/30 bg-blue-500/5 pointer-events-none p-5">
+                    <span
+                        class="text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+                        Stage 1 • Unified Staff Login &amp; Application Portal
+                    </span>
+                </div>
+
+                <!-- Zone 2 Banner -->
+                <div
+                    class="absolute left-[610px] top-[50px] w-[1420px] h-[490px] rounded-3xl border-2 border-dashed border-purple-500/30 bg-purple-500/5 pointer-events-none p-5">
+                    <span
+                        class="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">
+                        Stage 2 • Application 1: Access Control &amp; QR Ticket Scanner (Mobile Camera + Web Gate)
+                    </span>
+                </div>
+
+                <!-- Zone 3 Banner -->
+                <div
+                    class="absolute left-[610px] top-[580px] w-[2080px] h-[890px] rounded-3xl border-2 border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none p-5">
+                    <span
+                        class="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                        Stage 3 • Application 2: Event Food Ordering (1,500+ Orders), Live Plate Inventory &amp; Kitchen
+                        Ticket Printing
+                    </span>
+                </div>
+
+                <!-- SVG Connections Layer -->
+                <svg id="edges-svg" class="absolute inset-0 w-full h-full pointer-events-none"
+                    xmlns="http://www.w3.org/2000/svg"></svg>
+
+                <!-- HTML Nodes Layer -->
+                <div id="nodes-layer" class="absolute inset-0 w-full h-full"></div>
+
+            </div>
+
+            <!-- Floating Status Legend (Top Left) -->
+            <div
+                class="absolute top-4 left-4 z-20 bg-slate-900/95 backdrop-blur border border-slate-800 rounded-2xl p-3.5 shadow-xl flex flex-col gap-2 text-xs">
+                <div
+                    class="font-bold text-white border-b border-slate-800 pb-1.5 flex items-center justify-between gap-4">
+                    <span>Process State Legend</span>
+                    <span class="text-amber-400 font-semibold">Live Canvas</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span
+                        class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow">✓</span>
+                    <span class="text-slate-200">Passed Step (Active + Green Check Circle)</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="w-4 h-4 rounded-full border-2 border-amber-500 bg-amber-500/20"></span>
+                    <span class="text-slate-200">Currently Focused Step (Camera Zoomed)</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <span class="w-4 h-4 rounded-full bg-slate-700 border border-slate-500"></span>
+                    <span class="text-slate-400">Not Passed Yet (Greyed Out)</span>
+                </div>
+                <div class="text-slate-400 pt-1.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                    <span>🖱️ Drag to pan • Scroll to zoom</span>
+                </div>
+            </div>
+
+            <!-- Floating Active Step Inspector (Bottom Right) -->
+            <div id="inspector-card"
+                class="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-[460px] z-20 bg-slate-900/95 backdrop-blur border border-slate-700 rounded-2xl p-4 shadow-2xl">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-3">
+                        <div id="insp-icon"
+                            class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">
+                            🔐
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="insp-badge"
+                                    class="text-xs font-bold uppercase px-2 py-0.5 rounded bg-blue-500/15 text-blue-400">Entry</span>
+                                <span id="insp-step-counter" class="text-xs text-slate-400 font-medium">Step 1 of
+                                    18</span>
+                            </div>
+                            <h3 id="insp-title" class="font-bold text-sm text-white mt-0.5">1. Unified Portal Login</h3>
+                        </div>
+                    </div>
+                    <button onclick="toggleCurrentNodePassed()" id="insp-toggle-btn"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition shrink-0">
+                        ✓ Passed
+                    </button>
+                </div>
+
+                <p id="insp-desc" class="text-xs text-slate-300 mt-2.5 leading-relaxed">
+                    Staff or Admin signs in via the unified login screen. Authenticates session and routes to the main
+                    Event App Launcher.
+                </p>
+
+                <div id="insp-meta" class="mt-3 pt-2.5 border-t border-slate-800 flex flex-wrap gap-1.5"></div>
+
+                <!-- Direct Jump to Live Screen Preview -->
+                <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between">
+                    <span class="text-xs text-slate-400">Want to show this actual screen working?</span>
+                    <button onclick="openLiveScreenForActiveNode()"
+                        class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow">
+                        <span>🚀</span> Open This Screen in Live App
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- VIEW 2: LIVE INTERACTIVE APPLICATION PROTOTYPE (ALL SCREENS)        -->
+        <!-- =================================================================== -->
+        <div id="view-app" class="hidden flex-1 flex flex-col overflow-hidden bg-slate-950">
+
+            <!-- Sub-Navigation Bar for the Live App Screens -->
+            <div
+                class="bg-slate-900 border-b border-slate-800 px-5 py-2.5 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mr-2">Live App
+                        Screens:</span>
+                    <button onclick="showAppScreen('login')" id="subtab-login"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                        1. Login Screen
+                    </button>
+                    <button onclick="showAppScreen('launcher')" id="subtab-launcher"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">
+                        2. Main App Launcher
+                    </button>
+                    <button onclick="showAppScreen('scanner')" id="subtab-scanner"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">
+                        3A. App 1: QR Scanner &amp; Post-Reg
+                    </button>
+                    <button onclick="showAppScreen('ordering')" id="subtab-ordering"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">
+                        3B-1. Customer 1: Food Ordering
+                    </button>
+                    <button onclick="showAppScreen('processing')" id="subtab-processing"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800 flex items-center gap-1.5">
+                        <span>3B-2. Customer 2: Kitchen &amp; Print</span>
+                        <span id="badge-order-count"
+                            class="px-1.5 py-0.2 rounded-full bg-emerald-500 text-slate-950 font-bold text-xs">4</span>
+                    </button>
+                    <button onclick="showAppScreen('admin')" id="subtab-admin"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">
+                        3B-3. Backend: Menu &amp; Plate Stock
+                    </button>
+                </div>
+
+                <button onclick="switchMainView('flow')"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                    ← Back to Process Flow Canvas
+                </button>
+            </div>
+
+            <!-- Screen Content Area -->
+            <div class="flex-1 overflow-y-auto p-6">
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 1: UNIFIED LOGIN PORTAL (Matches Uploaded Screenshot 5)  -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-login" class="max-w-md mx-auto my-8">
+                    <div class="bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 p-8">
+                        <div class="flex items-center justify-center gap-2.5 mb-2">
+                            <div
+                                class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                                ⊞
+                            </div>
+                            <h2 class="text-2xl font-extrabold text-slate-900">Login</h2>
+                        </div>
+                        <p class="text-center text-sm text-slate-500 mb-6">
+                            Sign in to access the Renaissance Admission Scanner &amp; Catering Suite
+                        </p>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                                <input type="email" value="staff@renaissance-event.com"
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                                <input type="password" value="••••••••••"
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Staff Role</label>
+                                <select
+                                    class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-800 bg-slate-50">
+                                    <option>All-Access Supervisor (Gate + Catering + Kitchen)</option>
+                                    <option>Gate Usher (Mobile QR Scanner &amp; Post-Reg)</option>
+                                    <option>Table Waiter / Ordering Terminal</option>
+                                    <option>Kitchen Processing &amp; Docket Printer</option>
+                                </select>
+                            </div>
+                            <button onclick="showAppScreen('launcher')"
+                                class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition">
+                                Sign In to Event Suite →
+                            </button>
+                        </div>
+
+                        <div class="mt-6 text-center space-y-1.5 text-xs text-slate-500">
+                            <div>Need an account? <span class="text-blue-600 font-semibold cursor-pointer">Sign
+                                    up</span></div>
+                            <div><span class="text-slate-400 cursor-pointer">Forgot password?</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 2: MAIN APPLICATION LAUNCHER (Shows Both Combined Apps)  -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-launcher" class="hidden max-w-5xl mx-auto my-4">
+                    <div class="text-center mb-8">
+                        <span
+                            class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
+                            Renaissance End of Year Party • 10 Nov 2026
+                        </span>
+                        <h2 class="text-2xl font-extrabold text-white mt-2">Select Event Application Module</h2>
+                        <p class="text-sm text-slate-400 mt-1">
+                            Unified Web &amp; Mobile platform combining Gate Access Control and the 1,500+ Plate Food
+                            Ordering &amp; Kitchen System
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- App 1 Card -->
+                        <div onclick="showAppScreen('scanner')"
+                            class="group cursor-pointer rounded-2xl bg-slate-900 border-2 border-purple-500/40 hover:border-purple-400 p-6 shadow-xl transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div
+                                        class="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-2xl">
+                                        📱
+                                    </div>
+                                    <span
+                                        class="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                        Mobile Camera + Web Dashboard
+                                    </span>
+                                </div>
+                                <h3 class="text-xl font-bold text-white group-hover:text-purple-300 transition">
+                                    App 1: Access Control &amp; QR Ticket Scanner
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                    Scan guest QR tickets using mobile device cameras at the entrance gate. Supports
+                                    instant verification for pre-registered guests and on-the-spot
+                                    <strong>Post-Registration</strong> for walk-in attendees.
+                                </p>
+                                <div class="mt-4 space-y-2 text-xs text-slate-300">
+                                    <div class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Live
+                                        Mobile Camera QR Code Verification</div>
+                                    <div class="flex items-center gap-2"><span class="text-emerald-400">✓</span> Walk-in
+                                        Post-Registration &amp; Table/Seat Assignment</div>
+                                    <div class="flex items-center gap-2"><span class="text-emerald-400">✓</span>
+                                        Real-time Checked-In Headcount (1,110 / 1,500)</div>
+                                </div>
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-400">Gate Status: <strong
+                                        class="text-emerald-400">Online</strong></span>
+                                <span
+                                    class="px-4 py-2 rounded-xl bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs transition">
+                                    Launch QR Scanner App →
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- App 2 Card -->
+                        <div onclick="showAppScreen('ordering')"
+                            class="group cursor-pointer rounded-2xl bg-slate-900 border-2 border-amber-500/40 hover:border-amber-400 p-6 shadow-xl transition flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div
+                                        class="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
+                                        🍽️
+                                    </div>
+                                    <span
+                                        class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                        1,500+ Orders • Auto Sold-Out
+                                    </span>
+                                </div>
+                                <h3 class="text-xl font-bold text-white group-hover:text-amber-300 transition">
+                                    App 2: Event Food Ordering &amp; Kitchen Processing
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                    Complete catering workflow for Nigerian &amp; Continental dishes, Sides, and
+                                    Proteins. Automatically greys out depleted dishes as <strong>SOLD OUT</strong> and
+                                    routes orders to Kitchen Printers.
+                                </p>
+                                <div class="mt-4 grid grid-cols-3 gap-2 pt-2">
+                                    <button onclick="event.stopPropagation(); showAppScreen('ordering')"
+                                        class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500 text-left transition">
+                                        <div class="text-xs font-bold text-amber-400">Customer 1</div>
+                                        <div class="text-xs text-white font-semibold mt-0.5">Food Ordering</div>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); showAppScreen('processing')"
+                                        class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500 text-left transition">
+                                        <div class="text-xs font-bold text-emerald-400">Customer 2</div>
+                                        <div class="text-xs text-white font-semibold mt-0.5">Order &amp; Print</div>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); showAppScreen('admin')"
+                                        class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-blue-500 text-left transition">
+                                        <div class="text-xs font-bold text-blue-400">Backend</div>
+                                        <div class="text-xs text-white font-semibold mt-0.5">Menu &amp; Stock</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-400">Kitchen Queue: <strong class="text-amber-400">Live
+                                        Sync</strong></span>
+                                <span
+                                    class="px-4 py-2 rounded-xl bg-amber-500 group-hover:bg-amber-400 text-slate-950 font-bold text-xs transition">
+                                    Launch Food Platform →
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 3A: ACCESS CONTROL & MOBILE QR SCANNER + POST-REG        -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-scanner" class="hidden max-w-6xl mx-auto">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                        <!-- Left Column: Mobile Camera QR Scanner Simulator -->
+                        <div
+                            class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col items-center">
+                            <div class="w-full flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Mobile Gate
+                                    View (Camera)</span>
+                                <span
+                                    class="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-400 font-semibold">●
+                                    Camera Active</span>
+                            </div>
+
+                            <!-- Phone Frame -->
+                            <div
+                                class="w-full max-w-[320px] bg-slate-950 border-4 border-slate-800 rounded-3xl p-4 shadow-2xl">
+                                <div class="text-center mb-3">
+                                    <div class="text-xs font-bold text-white">Renaissance Gate Scanner</div>
+                                    <div class="text-xs text-slate-400">Point camera at Guest Ticket QR</div>
+                                </div>
+
+                                <!-- Viewfinder -->
+                                <div
+                                    class="relative w-full h-52 rounded-2xl bg-slate-900 border-2 border-purple-500/50 overflow-hidden flex items-center justify-center">
+                                    <div class="absolute inset-6 border-2 border-dashed border-amber-400/70 rounded-xl">
+                                    </div>
+                                    <div
+                                        class="scanner-laser absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-lg shadow-emerald-400">
+                                    </div>
+                                    <div class="text-center px-4">
+                                        <div class="text-3xl mb-1">📷</div>
+                                        <div id="scan-status-title" class="text-xs font-bold text-emerald-400">Ready to
+                                            Scan Ticket</div>
+                                        <div id="scan-status-sub" class="text-xs text-slate-400 mt-0.5">Select a test
+                                            scan below</div>
+                                    </div>
+                                </div>
+
+                                <!-- Simulate Scan Buttons -->
+                                <div class="mt-4 space-y-2">
+                                    <button onclick="simulateQrScan('valid')"
+                                        class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow">
+                                        <span>✓</span> Simulate Scan: Valid Pre-Registered QR
+                                    </button>
+                                    <button onclick="simulateQrScan('walkin')"
+                                        class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center justify-center gap-2 shadow">
+                                        <span>📝</span> Simulate Unregistered / Walk-In Guest
+                                    </button>
+                                </div>
+
+                                <!-- Scanned Guest Result Box -->
+                                <div id="scan-result-card"
+                                    class="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-bold text-emerald-400">✓ VERIFIED GUEST</span>
+                                        <span class="text-xs font-mono text-slate-300">TKT #REN-0842</span>
+                                    </div>
+                                    <div class="text-sm font-bold text-white mt-1" id="scan-guest-name">Chidi Nwosu
+                                    </div>
+                                    <div class="text-xs text-slate-300 mt-0.5" id="scan-guest-seat">Table 12 • Seat 4
+                                    </div>
+                                    <button onclick="showAppScreen('ordering')"
+                                        class="mt-2.5 w-full py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition">
+                                        Proceed to Guest Food Order →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Post-Registration & Live Gate Attendance -->
+                        <div class="lg:col-span-7 space-y-5">
+                            <!-- Live Stats Row -->
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                                    <div class="text-xs text-slate-400">Expected Guests</div>
+                                    <div class="text-2xl font-extrabold text-white mt-1">1,500</div>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                                    <div class="text-xs text-slate-400">Checked-In (QR)</div>
+                                    <div id="stat-checked-in" class="text-2xl font-extrabold text-emerald-400 mt-1">
+                                        1,112</div>
+                                </div>
+                                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                                    <div class="text-xs text-slate-400">Post-Registered</div>
+                                    <div id="stat-post-reg" class="text-2xl font-extrabold text-amber-400 mt-1">48</div>
+                                </div>
+                            </div>
+
+                            <!-- Post-Registration Form (For Walk-ins / Unregistered Ticket Holders) -->
+                            <div id="post-reg-panel"
+                                class="bg-slate-900 border-2 border-slate-800 rounded-2xl p-6 shadow-xl transition">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 class="text-base font-bold text-white">Post-Registration &amp; Instant Seat
+                                            Assignment</h3>
+                                        <p class="text-xs text-slate-400">Register VIPs or walk-in guests at the gate
+                                            and issue an instant table/seat pass</p>
+                                    </div>
+                                    <span
+                                        class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-400 text-xs font-bold border border-amber-500/30">
+                                        Branch 5A-2
+                                    </span>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Full Name
+                                            *</label>
+                                        <input id="postreg-name" type="text" placeholder="e.g. Amina Bello"
+                                            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-white" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Phone / Staff ID
+                                            *</label>
+                                        <input id="postreg-phone" type="text" placeholder="e.g. 0803 000 1234"
+                                            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-white" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Assign Table
+                                            Number *</label>
+                                        <select id="postreg-table"
+                                            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-white">
+                                            <option value="14">Table 14 (3 Seats Available)</option>
+                                            <option value="18">Table 18 (2 Seats Available)</option>
+                                            <option value="22">Table 22 (5 Seats Available)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Assign Seat
+                                            Number *</label>
+                                        <select id="postreg-seat"
+                                            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm text-white">
+                                            <option value="6">Seat 6</option>
+                                            <option value="7">Seat 7</option>
+                                            <option value="8">Seat 8</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button onclick="completePostRegistration()"
+                                    class="mt-4 w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow">
+                                    ✓ Complete Post-Registration &amp; Check-In Guest
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 3B-1: CUSTOMER 1 — FOOD ORDERING (Matches MS Forms UI)   -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-ordering" class="hidden max-w-3xl mx-auto">
+                    <div
+                        class="bg-[#f4f1ea] text-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-300">
+
+                        <!-- Header Banner matching "Renaissance End of Year Party Menu" -->
+                        <div class="relative bg-gradient-to-r from-[#5c4938] via-[#7c654f] to-[#4a3a2c] p-8 text-white">
+                            <div class="bg-[#ede8df]/95 text-[#5a4634] rounded-xl p-6 max-w-xl shadow-lg">
+                                <h2 class="text-2xl font-extrabold tracking-tight">Renaissance End of Year Party Menu
+                                </h2>
+                                <p class="text-xs font-bold mt-2 text-[#7a634d]">10 Nov 2026</p>
+                                <p class="text-xs mt-2 text-slate-700">
+                                    This is a quick order form to collect and process your order for the event. Items
+                                    whose plates are exceeded automatically grey out as <strong>SOLD OUT</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Form Body -->
+                        <div class="p-6 sm:p-8 space-y-6 bg-white">
+
+                            <!-- Q1, Q2, Q3: Name, Table, Seat -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-800 mb-1">1. Please enter your name
+                                        <span class="text-rose-600">*</span></label>
+                                    <input id="order-name" type="text" value="Oluwatosin Dawodu"
+                                        class="w-full px-3 py-2 rounded-lg bg-slate-100 border border-slate-300 text-sm text-slate-900" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-800 mb-1">2. Please enter your
+                                        table number <span class="text-rose-600">*</span></label>
+                                    <select id="order-table"
+                                        class="w-full px-3 py-2 rounded-lg bg-slate-100 border border-slate-300 text-sm text-slate-900">
+                                        <option value="Table 5">Table 5</option>
+                                        <option value="Table 12" selected>Table 12</option>
+                                        <option value="Table 14">Table 14</option>
+                                        <option value="Table 20">Table 20</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-800 mb-1">3. Please enter your seat
+                                        number <span class="text-rose-600">*</span></label>
+                                    <select id="order-seat"
+                                        class="w-full px-3 py-2 rounded-lg bg-slate-100 border border-slate-300 text-sm text-slate-900">
+                                        <option value="Seat 1">Seat 1</option>
+                                        <option value="Seat 4" selected>Seat 4</option>
+                                        <option value="Seat 7">Seat 7</option>
+                                        <option value="Seat 10">Seat 10</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Q4: Meal Category Preference -->
+                            <div class="pt-4 border-t border-slate-200">
+                                <label class="block text-sm font-bold text-slate-900 mb-2">
+                                    4. Please Select Your Meal Preference <span class="text-rose-600">*</span>
+                                </label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <label onclick="switchMealCategory('nigerian')" id="cat-btn-nigerian"
+                                        class="cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-amber-600 bg-amber-50/70 transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <input type="radio" name="meal_cat" checked
+                                                class="w-4 h-4 accent-amber-600" />
+                                            <span class="font-bold text-sm text-slate-900">🍲 Nigerian Dishes</span>
+                                        </div>
+                                        <span
+                                            class="text-xs font-semibold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded">14
+                                            Combos</span>
+                                    </label>
+
+                                    <label onclick="switchMealCategory('continental')" id="cat-btn-continental"
+                                        class="cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-slate-50 transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <input type="radio" name="meal_cat" class="w-4 h-4 accent-amber-600" />
+                                            <span class="font-bold text-sm text-slate-900">🍤 Continental Dishes</span>
+                                        </div>
+                                        <span
+                                            class="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-0.5 rounded">16
+                                            Combos</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Q5 / Q7: Dynamic Dish List with Live Plate Counter & Sold-Out Grey-Out -->
+                            <div class="pt-4 border-t border-slate-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <label id="dish-section-title" class="block text-sm font-bold text-slate-900">
+                                        5. Select Your Nigerian Meal Preference <span class="text-rose-600">*</span>
+                                    </label>
+                                    <span class="text-xs text-slate-500">Items with 0 plates automatically grey
+                                        out</span>
+                                </div>
+                                <div id="dishes-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+                            </div>
+
+                            <!-- Q6: Preferred Sides (Max 2) -->
+                            <div class="pt-4 border-t border-slate-200">
+                                <label class="block text-sm font-bold text-slate-900">
+                                    6. Please select Preferred Sides <span class="text-rose-600">*</span>
+                                </label>
+                                <p class="text-xs text-slate-500 mb-2.5">Please select at most 2 options.</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="sides-container">
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Moi Moi" checked
+                                            class="side-check accent-amber-600" /> Moi Moi
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Plantain" checked
+                                            class="side-check accent-amber-600" /> Plantain
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Salad" class="side-check accent-amber-600" />
+                                        Salad
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="None" class="side-check accent-amber-600" /> None
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Q8: Protein Selection (Max 2) -->
+                            <div class="pt-4 border-t border-slate-200">
+                                <label class="block text-sm font-bold text-slate-900">
+                                    8. Please select at least one Protein or None <span class="text-rose-600">*</span>
+                                </label>
+                                <p class="text-xs text-slate-500 mb-2.5">Note: If you select the None option, no protein
+                                    will be served. Please select at most 2 options.</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="proteins-container">
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Chicken" checked
+                                            class="protein-check accent-amber-600" /> Chicken
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Beef" class="protein-check accent-amber-600" />
+                                        Beef
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="Fish" checked
+                                            class="protein-check accent-amber-600" /> Fish
+                                    </label>
+                                    <label
+                                        class="flex items-center gap-2 p-2.5 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer text-xs font-semibold">
+                                        <input type="checkbox" value="None" class="protein-check accent-amber-600" />
+                                        None
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Submit Order Button -->
+                            <div class="pt-4 border-t border-slate-200 flex items-center justify-between">
+                                <div id="order-feedback" class="text-xs font-semibold text-emerald-700"></div>
+                                <button onclick="submitFoodOrder()"
+                                    class="px-6 py-3 rounded-xl bg-[#6b533b] hover:bg-[#57422e] text-white font-bold text-sm shadow-lg transition">
+                                    Submit Meal Order &amp; Send to Kitchen →
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 3B-2: CUSTOMER 2 — ORDER PROCESSING & THERMAL PRINTING   -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-processing" class="hidden max-w-6xl mx-auto">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                        <!-- Left 7 Cols: Live Incoming Orders Feed -->
+                        <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                            <div
+                                class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                                <div>
+                                    <h3 class="text-base font-bold text-white">Customer 2: Kitchen Order Processing
+                                        Queue</h3>
+                                    <p class="text-xs text-slate-400">Live stream of table orders • Click any order to
+                                        preview &amp; print kitchen docket</p>
+                                </div>
+                                <span
+                                    class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                    ● Live Feed Active
+                                </span>
+                            </div>
+
+                            <div id="orders-queue-list" class="space-y-3"></div>
+                        </div>
+
+                        <!-- Right 5 Cols: Thermal Printer Slip Preview -->
+                        <div
+                            class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col items-center">
+                            <div class="w-full flex items-center justify-between mb-3">
+                                <span class="text-xs font-bold uppercase tracking-wider text-amber-400">80mm Thermal
+                                    Kitchen Slip</span>
+                                <button onclick="printActiveDocket()"
+                                    class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow flex items-center gap-1.5">
+                                    <span>🖨️</span> Print Order Slip Now
+                                </button>
+                            </div>
+
+                            <!-- Thermal Paper Receipt -->
+                            <div id="docket-preview"
+                                class="w-full max-w-[330px] bg-[#fffdf9] text-slate-900 rounded-xl p-5 shadow-2xl border-t-8 border-slate-800 font-mono text-xs space-y-3">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- --------------------------------------------------------------- -->
+                <!-- SCREEN 3B-3: BACKEND — MENU UPLOAD & PLATE STOCK CONTROL        -->
+                <!-- --------------------------------------------------------------- -->
+                <div id="screen-admin" class="hidden max-w-5xl mx-auto">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-800">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">Backend Menu &amp; Plate Availability Manager
+                                </h3>
+                                <p class="text-xs text-slate-400">
+                                    Set available plates per dish or click <strong>"Force 0 (Test Sold-Out)"</strong> to
+                                    see it immediately grey out on the Customer Ordering screen.
+                                </p>
+                            </div>
+                            <button onclick="showAppScreen('ordering')"
+                                class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition">
+                                View Live Ordering Form →
+                            </button>
+                        </div>
+
+                        <!-- Quick Add New Dish Row -->
+                        <div
+                            class="bg-slate-950 border border-slate-800 rounded-xl p-4 mb-6 flex flex-wrap items-end gap-3">
+                            <div class="flex-1 min-w-[200px]">
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Add New Dish
+                                    Combo</label>
+                                <input id="new-dish-name" type="text" placeholder="e.g. Peppered Snail + Yam Porridge"
+                                    class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Category</label>
+                                <select id="new-dish-cat"
+                                    class="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white">
+                                    <option value="nigerian">Nigerian Dishes</option>
+                                    <option value="continental">Continental Dishes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-400 mb-1">Available Plates</label>
+                                <input id="new-dish-stock" type="number" value="120"
+                                    class="w-24 px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white" />
+                            </div>
+                            <button onclick="addNewDishFromAdmin()"
+                                class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition">
+                                + Upload Dish to Menu
+                            </button>
+                        </div>
+
+                        <!-- Inventory Table -->
+                        <div id="admin-stock-table" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // =========================================================================
+        // 1. PROCESS FLOW NODES & EDGES (Linked to Live App Screens)
+        // =========================================================================
+        const NODES = [
+            {
+                id: 'login',
+                x: 70, y: 520,
+                title: '1. Unified Portal Login',
+                subtitle: 'Staff & Admin Authentication',
+                icon: '🔐',
+                zone: 'Unified Entry',
+                zoneColor: 'blue',
+                type: 'trigger',
+                appScreen: 'login',
+                desc: 'Staff, Gate Ushers, Waiters, and Kitchen Crew sign in via the Login portal. Authenticates credentials and opens the Main App Launcher.',
+                tags: ['Role-Based Auth', 'Web & Mobile Ready', 'Single Sign-On']
+            },
+            {
+                id: 'hub',
+                x: 320, y: 520,
+                title: '2. Main App Launcher',
+                subtitle: 'Decision: Choose Event Module',
+                icon: '🧭',
+                zone: 'Double Decision Maker',
+                zoneColor: 'amber',
+                type: 'decision',
+                appScreen: 'launcher',
+                desc: 'Main dashboard displaying the two combined Event Applications: (A) Access Control & QR Scanner and (B) Food Ordering & Kitchen Processing.',
+                tags: ['Branch A: Access Control', 'Branch B: Food Platform']
+            },
+
+            // --- APP 1: ACCESS CONTROL & QR SCANNER ---
+            {
+                id: 'app_scanner',
+                x: 650, y: 220,
+                title: '3A. Access Control App',
+                subtitle: 'Mobile Camera + Web Gate UI',
+                icon: '📱',
+                zone: 'App 1 • QR Scanner',
+                zoneColor: 'purple',
+                type: 'app',
+                appScreen: 'scanner',
+                desc: 'Activates mobile rear camera for fast QR scanning at the venue entrance while syncing live headcount to the Web Gate dashboard.',
+                tags: ['Mobile Camera API', 'Live Headcount', 'Anti-Passback']
+            },
+            {
+                id: 'qr_scan',
+                x: 920, y: 220,
+                title: '4A. Scan Ticket Decision',
+                subtitle: 'Decision: Valid QR or Walk-In?',
+                icon: '📷',
+                zone: 'Double Decision Maker',
+                zoneColor: 'amber',
+                type: 'decision',
+                appScreen: 'scanner',
+                desc: 'Evaluates scanned QR code. Branches into Instant Verification (Pre-Registered Guest) or Post-Registration Form (Walk-in / Unregistered).',
+                tags: ['Branch 1: Pre-Registered', 'Branch 2: Post-Registration']
+            },
+            {
+                id: 'valid_ticket',
+                x: 1210, y: 115,
+                title: '5A-1. Pre-Registered Ticket',
+                subtitle: 'Instant Seat Verification',
+                icon: '🎟️',
+                zone: 'App 1 • QR Scanner',
+                zoneColor: 'purple',
+                type: 'process',
+                appScreen: 'scanner',
+                desc: 'Validates guest ticket ID and retrieves their assigned Table Number and Seat Number automatically.',
+                tags: ['Instant Lookup', 'Table & Seat Confirmed']
+            },
+            {
+                id: 'post_reg',
+                x: 1210, y: 325,
+                title: '5A-2. Post-Registration Form',
+                subtitle: 'On-Spot Walk-in / New Guest',
+                icon: '📝',
+                zone: 'App 1 • QR Scanner',
+                zoneColor: 'purple',
+                type: 'process',
+                appScreen: 'scanner',
+                desc: 'Captures Full Name & Phone at the door, assigns an open Table & Seat Number, and generates an instant check-in pass.',
+                tags: ['Walk-in Capture', 'Dynamic Seat Allocation']
+            },
+            {
+                id: 'admitted',
+                x: 1510, y: 220,
+                title: '6A. Guest Checked-In',
+                subtitle: 'Admitted + Unlocks Meal Order',
+                icon: '🎉',
+                zone: 'App 1 • QR Scanner',
+                zoneColor: 'emerald',
+                type: 'success',
+                appScreen: 'scanner',
+                desc: 'Marks guest as Checked-In, increments live attendance counter, and unlocks their Table/Seat for Food Ordering.',
+                tags: ['Attendance +1', 'Seated & Ready to Order']
+            },
+
+            // --- APP 2: FOOD PLATFORM ---
+            {
+                id: 'app_food',
+                x: 650, y: 920,
+                title: '3B. Food Platform Hub',
+                subtitle: 'Decision: Role / View Mode',
+                icon: '🍽️',
+                zone: 'Double Decision Maker',
+                zoneColor: 'amber',
+                type: 'decision',
+                appScreen: 'launcher',
+                desc: 'Routes users into (1) Backend Menu & Plate Stock Upload, (2) Customer 1: Food Ordering (1,500+ scale), or (3) Customer 2: Order Processing & Printing.',
+                tags: ['Backend Stock', 'Customer 1: Ordering', 'Customer 2: Processing']
+            },
+            {
+                id: 'admin_menu',
+                x: 940, y: 650,
+                title: '4B-Admin. Menu & Stock Upload',
+                subtitle: 'Categories + Plate Quotas',
+                icon: '⚙️',
+                zone: 'Backend Admin',
+                zoneColor: 'blue',
+                type: 'process',
+                appScreen: 'admin',
+                desc: 'Backend interface to upload dishes into categories (Nigerian, Continental, Sides, Proteins) and set exact available plate counts.',
+                tags: ['Category Upload', 'Set Plate Limits', 'Real-Time Sync']
+            },
+            {
+                id: 'order_seat',
+                x: 940, y: 920,
+                title: '4B-1. Guest & Table Details',
+                subtitle: 'Name, Table # & Seat #',
+                icon: '🪑',
+                zone: 'Customer 1 • Ordering',
+                zoneColor: 'amber',
+                type: 'process',
+                appScreen: 'ordering',
+                desc: 'Guest or waiter enters Name, Table Number, and Seat Number (matching Questions 1–3 of the Renaissance End of Year Party Menu form).',
+                tags: ['Guest Name', 'Table Number', 'Seat Number']
+            },
+            {
+                id: 'cat_decision',
+                x: 1220, y: 920,
+                title: '5B. Meal Category Decision',
+                subtitle: 'Decision: Nigerian vs Continental',
+                icon: '🥘',
+                zone: 'Double Decision Maker',
+                zoneColor: 'amber',
+                type: 'decision',
+                appScreen: 'ordering',
+                desc: 'Question 4 branch: Selecting Nigerian Dishes or Continental Dishes dynamically switches the available menu combinations.',
+                tags: ['Branch: Nigerian Dishes', 'Branch: Continental Dishes']
+            },
+            {
+                id: 'menu_nigerian',
+                x: 1510, y: 780,
+                title: '6B-1. Nigerian Dishes Menu',
+                subtitle: '14 Combos + Live Plate Count',
+                icon: '🍲',
+                zone: 'Customer 1 • Ordering',
+                zoneColor: 'emerald',
+                type: 'process',
+                appScreen: 'ordering',
+                desc: 'Question 5: Jollof + Fried/Coconut Rice, Ofada + Sauce, Afang/Egusi/Banga + (Garri, Semo, Fufu), Gbegiri/Ewedu + Amala.',
+                tags: ['Jollof / Ofada', 'Afang / Egusi / Banga', 'Amala + Ewedu']
+            },
+            {
+                id: 'menu_continental',
+                x: 1510, y: 1030,
+                title: '6B-2. Continental Dishes Menu',
+                subtitle: '16 Combos + Live Plate Count',
+                icon: '🍤',
+                zone: 'Customer 1 • Ordering',
+                zoneColor: 'emerald',
+                type: 'process',
+                appScreen: 'ordering',
+                desc: 'Question 7: Oriental Fried Rice, Special Fried Rice, Jambalaya Rice, or Singapore Noodles paired with Prawns or Curry Sauce.',
+                tags: ['Oriental / Special Rice', 'Jambalaya / Noodles', 'Prawns & Curry']
+            },
+            {
+                id: 'stock_decision',
+                x: 1800, y: 900,
+                title: '7B. Plate Availability Check',
+                subtitle: 'Decision: Plates > 0 or Exceeded?',
+                icon: '📊',
+                zone: 'Double Decision Maker',
+                zoneColor: 'amber',
+                type: 'decision',
+                appScreen: 'ordering',
+                desc: 'Checks live plate inventory across 1,500+ orders. If plates > 0, allows selection. Once exceeded (0 left), automatically greys out as SOLD OUT.',
+                tags: ['Plates > 0: Available', 'Exceeded: Auto Grey-Out']
+            },
+            {
+                id: 'sold_out',
+                x: 2090, y: 740,
+                title: '8B-X. Auto Grey-Out (Sold Out)',
+                subtitle: 'Disabled Item • Pick Another',
+                icon: '🚫',
+                zone: 'Inventory Protection',
+                zoneColor: 'rose',
+                type: 'warning',
+                appScreen: 'ordering',
+                desc: 'Dish option is automatically greyed out and disabled with a "SOLD OUT" badge so guests can only choose available dishes.',
+                tags: ['Greyed-Out UI', 'Zero Over-Ordering']
+            },
+            {
+                id: 'sides_protein',
+                x: 2090, y: 960,
+                title: '8B-1. Sides & Protein Add-ons',
+                subtitle: 'Max 2 Sides + Max 2 Proteins',
+                icon: '🍗',
+                zone: 'Customer 1 • Ordering',
+                zoneColor: 'emerald',
+                type: 'process',
+                appScreen: 'ordering',
+                desc: 'Questions 6 & 8: Select up to 2 Sides (Moi Moi, Plantain, Salad, None) and up to 2 Proteins (Chicken, Beef, Fish, None), then submit.',
+                tags: ['Moi Moi / Plantain / Salad', 'Chicken / Beef / Fish']
+            },
+            {
+                id: 'kitchen_queue',
+                x: 2090, y: 1260,
+                title: '9B. Processing Live Queue',
+                subtitle: 'Customer 2: View Incoming Orders',
+                icon: '🖥️',
+                zone: 'Customer 2 • Processing',
+                zoneColor: 'purple',
+                type: 'process',
+                appScreen: 'processing',
+                desc: 'Kitchen & Processing team sees incoming orders in real time with Guest Name, Table #, Seat #, Dish, Sides, and Proteins.',
+                tags: ['Live Kitchen Screen', 'Table & Seat Sorting']
+            },
+            {
+                id: 'print_docket',
+                x: 2400, y: 1260,
+                title: '10B. Print Slip & Dispatch',
+                subtitle: 'Thermal Docket + Order Served',
+                icon: '🖨️',
+                zone: 'Customer 2 • Processing',
+                zoneColor: 'emerald',
+                type: 'success',
+                appScreen: 'processing',
+                desc: 'Prints the physical 80mm thermal kitchen docket for the waiter to deliver straight to the guest Table & Seat.',
+                tags: ['Thermal Slip Print', 'Waiter Dispatch ✓']
+            }
+        ];
+
+        const EDGES = [
+            { from: 'login', to: 'hub', label: 'Signed In' },
+            { from: 'hub', to: 'app_scanner', label: 'App 1: Access Control' },
+            { from: 'hub', to: 'app_food', label: 'App 2: Food Platform' },
+            { from: 'app_scanner', to: 'qr_scan', label: 'Scan Ticket' },
+            { from: 'qr_scan', to: 'valid_ticket', label: 'Valid QR' },
+            { from: 'qr_scan', to: 'post_reg', label: 'Walk-in / No QR' },
+            { from: 'valid_ticket', to: 'admitted', label: 'Verified' },
+            { from: 'post_reg', to: 'admitted', label: 'Assigned Seat' },
+            { from: 'admitted', to: 'order_seat', label: 'Guest Seated', dashed: true },
+            { from: 'app_food', to: 'admin_menu', label: 'Backend Admin' },
+            { from: 'app_food', to: 'order_seat', label: 'Customer 1: Order' },
+            { from: 'app_food', to: 'kitchen_queue', label: 'Customer 2: Process' },
+            { from: 'admin_menu', to: 'stock_decision', label: 'Plate Quotas', dashed: true },
+            { from: 'order_seat', to: 'cat_decision', label: 'Table & Seat Set' },
+            { from: 'cat_decision', to: 'menu_nigerian', label: 'Nigerian' },
+            { from: 'cat_decision', to: 'menu_continental', label: 'Continental' },
+            { from: 'menu_nigerian', to: 'stock_decision', label: 'Select Dish' },
+            { from: 'menu_continental', to: 'stock_decision', label: 'Select Dish' },
+            { from: 'stock_decision', to: 'sold_out', label: '0 Plates (Exceeded)' },
+            { from: 'stock_decision', to: 'sides_protein', label: 'Plates Available' },
+            { from: 'sides_protein', to: 'kitchen_queue', label: 'Submit (Stock -1)' },
+            { from: 'kitchen_queue', to: 'print_docket', label: 'Print Docket' }
+        ];
+
+        const SCENARIOS = {
+            all: [
+                'login', 'hub',
+                'app_scanner', 'qr_scan', 'valid_ticket', 'post_reg', 'admitted',
+                'app_food', 'admin_menu', 'order_seat', 'cat_decision',
+                'menu_nigerian', 'menu_continental', 'stock_decision', 'sold_out',
+                'sides_protein', 'kitchen_queue', 'print_docket'
+            ],
+            scanner: ['login', 'hub', 'app_scanner', 'qr_scan', 'valid_ticket', 'post_reg', 'admitted'],
+            food: [
+                'login', 'hub', 'app_food', 'admin_menu', 'order_seat', 'cat_decision',
+                'menu_nigerian', 'menu_continental', 'stock_decision', 'sold_out',
+                'sides_protein', 'kitchen_queue', 'print_docket'
+            ]
+        };
+
+        // =========================================================================
+        // 2. LIVE APPLICATION MENU & ORDER STATE (Matches Uploaded MS Forms)
+        // =========================================================================
+        const MENU_ITEMS = [
+            // Nigerian Dishes (Question 5)
+            { id: 'nig_1', cat: 'nigerian', name: 'Jollof Rice + Fried Rice', stock: 180 },
+            { id: 'nig_2', cat: 'nigerian', name: 'Jollof Rice + Coconut Rice', stock: 95 },
+            { id: 'nig_3', cat: 'nigerian', name: 'Fried Rice + Coconut Rice', stock: 70 },
+            { id: 'nig_4', cat: 'nigerian', name: 'Ofada Rice + Sauce', stock: 0 }, // Pre-set to 0 to demonstrate auto-greyed out SOLD OUT!
+            { id: 'nig_5', cat: 'nigerian', name: 'Afang Soup + Garri', stock: 65 },
+            { id: 'nig_6', cat: 'nigerian', name: 'Afang Soup + Semovita', stock: 50 },
+            { id: 'nig_7', cat: 'nigerian', name: 'Afang Soup + Fufu', stock: 45 },
+            { id: 'nig_8', cat: 'nigerian', name: 'Egusi Soup + Garri', stock: 80 },
+            { id: 'nig_9', cat: 'nigerian', name: 'Egusi Soup + Semovita', stock: 60 },
+            { id: 'nig_10', cat: 'nigerian', name: 'Egusi Soup + Fufu', stock: 40 },
+            { id: 'nig_11', cat: 'nigerian', name: 'Native Soup (Banga) + Garri', stock: 55 },
+            { id: 'nig_12', cat: 'nigerian', name: 'Native Soup (Banga) + Semo', stock: 0 }, // Pre-set to 0 to show Sold Out
+            { id: 'nig_13', cat: 'nigerian', name: 'Native Soup (Banga) + Fufu', stock: 35 },
+            { id: 'nig_14', cat: 'nigerian', name: 'Gbegiri + Amala / Ewedu + Amala', stock: 90 },
+
+            // Continental Dishes (Question 7)
+            { id: 'cont_1', cat: 'continental', name: 'Oriental Fried Rice + Buttery Prawns', stock: 85 },
+            { id: 'cont_2', cat: 'continental', name: 'Oriental Fried Rice + Garlic Butter Prawns', stock: 60 },
+            { id: 'cont_3', cat: 'continental', name: 'Oriental Fried Rice + Beef Curry Sauce', stock: 75 },
+            { id: 'cont_4', cat: 'continental', name: 'Oriental Fried Rice + Chicken Curry Sauce', stock: 90 },
+            { id: 'cont_5', cat: 'continental', name: 'Special Fried Rice + Buttery Prawns', stock: 0 }, // Sold Out demo
+            { id: 'cont_6', cat: 'continental', name: 'Special Fried Rice + Garlic Butter Prawns', stock: 50 },
+            { id: 'cont_7', cat: 'continental', name: 'Special Fried Rice + Beef Curry Sauce', stock: 65 },
+            { id: 'cont_8', cat: 'continental', name: 'Special Fried Rice + Chicken Curry Sauce', stock: 80 },
+            { id: 'cont_9', cat: 'continental', name: 'Jambalaya Rice + Buttery Prawns', stock: 45 },
+            { id: 'cont_10', cat: 'continental', name: 'Jambalaya Rice + Garlic Butter Prawns', stock: 40 },
+            { id: 'cont_11', cat: 'continental', name: 'Singapore Noodles + Buttery Prawns', stock: 55 },
+            { id: 'cont_12', cat: 'continental', name: 'Singapore Noodles + Chicken Curry Sauce', stock: 70 }
+        ];
+
+        let selectedCategory = 'nigerian';
+        let selectedDishId = 'nig_1';
+
+        let ORDERS_QUEUE = [
+            {
+                id: 'ORD-1114',
+                guest: 'Oluwatosin Dawodu',
+                table: 'Table 12',
+                seat: 'Seat 4',
+                category: 'Nigerian Dishes',
+                dish: 'Jollof Rice + Fried Rice',
+                sides: ['Moi Moi', 'Plantain'],
+                proteins: ['Chicken', 'Fish'],
+                time: '11:14 AM',
+                status: 'Printed ✓'
+            },
+            {
+                id: 'ORD-1113',
+                guest: 'Chidi Nwosu',
+                table: 'Table 8',
+                seat: 'Seat 2',
+                category: 'Continental Dishes',
+                dish: 'Oriental Fried Rice + Buttery Prawns',
+                sides: ['Salad'],
+                proteins: ['Beef'],
+                time: '11:12 AM',
+                status: 'Pending Print'
+            },
+            {
+                id: 'ORD-1112',
+                guest: 'Funke Akindele',
+                table: 'Table 3',
+                seat: 'Seat 9',
+                category: 'Nigerian Dishes',
+                dish: 'Gbegiri + Amala / Ewedu + Amala',
+                sides: ['Plantain'],
+                proteins: ['Beef', 'Fish'],
+                time: '11:09 AM',
+                status: 'Printed ✓'
+            },
+            {
+                id: 'ORD-1111',
+                guest: 'Ibrahim Musa',
+                table: 'Table 19',
+                seat: 'Seat 1',
+                category: 'Continental Dishes',
+                dish: 'Singapore Noodles + Chicken Curry Sauce',
+                sides: ['Moi Moi', 'Salad'],
+                proteins: ['Chicken'],
+                time: '11:05 AM',
+                status: 'Printed ✓'
+            }
+        ];
+        let activeOrderId = 'ORD-1114';
+
+        // =========================================================================
+        // 3. CANVAS RENDERING & CAMERA LOGIC
+        // =========================================================================
+        let currentScenario = 'all';
+        let currentStepIdx = 0;
+        let passedNodes = new Set(['login']);
+        let activeNodeId = 'login';
+        let autoPlayTimer = null;
+
+        let camX = 40;
+        let camY = -180;
+        let camScale = 0.85;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+
+        const NODE_WIDTH = 224;
+        const NODE_HEIGHT = 114;
+
+        function getZoneBadgeClasses(color) {
+            const map = {
+                blue: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+                amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+                purple: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                emerald: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+                rose: 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+            };
+            return map[color] || map.blue;
+        }
+
+        function renderGraph() {
+            const nodesLayer = document.getElementById('nodes-layer');
+            const edgesSvg = document.getElementById('edges-svg');
+
+            let svgHtml = '';
+            EDGES.forEach(edge => {
+                const fromNode = NODES.find(n => n.id === edge.from);
+                const toNode = NODES.find(n => n.id === edge.to);
+                if (!fromNode || !toNode) return;
+
+                const x1 = fromNode.x + NODE_WIDTH;
+                const y1 = fromNode.y + NODE_HEIGHT / 2;
+                const x2 = toNode.x;
+                const y2 = toNode.y + NODE_HEIGHT / 2;
+
+                const dx = Math.max(Math.abs(x2 - x1) * 0.5, 60);
+                const pathData = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+                const bothPassed = passedNodes.has(edge.from) && passedNodes.has(edge.to);
+                const isCurrentTarget = activeNodeId === edge.to && passedNodes.has(edge.from);
+
+                let strokeColor = 'rgba(148, 163, 184, 0.22)';
+                let strokeWidth = 2.5;
+                let animClass = '';
+
+                if (bothPassed) {
+                    strokeColor = '#10b981';
+                    strokeWidth = 3;
+                    animClass = 'edge-active';
+                } else if (isCurrentTarget) {
+                    strokeColor = '#f59e0b';
+                    strokeWidth = 3;
+                    animClass = 'edge-active';
+                }
+
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2 - 8;
+
+                svgHtml += `
+          <g>
+            <path d="${pathData}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" class="${animClass}" ${edge.dashed ? 'stroke-dasharray="4 4"' : ''} />
+            <circle cx="${x1}" cy="${y1}" r="4" fill="${strokeColor}" />
+            <circle cx="${x2}" cy="${y2}" r="5" fill="${strokeColor}" />
+            ${edge.label ? `
+              <rect x="${midX - 60}" y="${midY - 11}" width="120" height="19" rx="6" fill="#0f172a" stroke="${strokeColor}" stroke-width="1" opacity="0.94" />
+              <text x="${midX}" y="${midY + 2}" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">${edge.label}</text>
+            ` : ''}
+          </g>
+        `;
+            });
+            edgesSvg.innerHTML = svgHtml;
+
+            let nodesHtml = '';
+            NODES.forEach(node => {
+                const isPassed = passedNodes.has(node.id);
+                const isActive = activeNodeId === node.id;
+
+                let stateClass = 'node-pending';
+                if (isActive) stateClass = 'node-active';
+                else if (isPassed) stateClass = 'node-passed';
+
+                const isDecision = node.type === 'decision';
+
+                nodesHtml += `
+          <div
+            onclick="handleNodeClick('${node.id}', event)"
+            style="left: ${node.x}px; top: ${node.y}px; width: ${NODE_WIDTH}px; height: ${NODE_HEIGHT}px;"
+            class="node-card absolute rounded-2xl bg-slate-900 border-2 ${isDecision ? 'border-amber-500/60' : 'border-slate-700'} p-3 cursor-pointer flex flex-col justify-between ${stateClass}"
+          >
+            <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 ${isPassed ? 'border-emerald-500' : 'border-slate-500'}"></div>
+            <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 ${isPassed ? 'border-emerald-500' : 'border-slate-500'}"></div>
+
+            ${isPassed ? `
+              <div class="tick-badge absolute -top-3 -right-3 w-7 h-7 rounded-full bg-emerald-500 text-white shadow-lg border-2 border-slate-950 flex items-center justify-center font-bold text-xs z-10" title="Step Passed">
+                ✓
+              </div>
+            ` : `
+              <div class="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-slate-800 text-slate-400 border border-slate-600 flex items-center justify-center text-xs z-10" title="Not Passed Yet">
+                •
+              </div>
+            `}
+
+            <div class="flex items-center justify-between gap-1.5">
+              <div class="w-8 h-8 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-base shrink-0">
+                ${node.icon}
+              </div>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-md border truncate ${getZoneBadgeClasses(node.zoneColor)}">
+                ${isDecision ? '◆ Decision' : node.zone.split('•')[0].trim()}
+              </span>
+            </div>
+
+            <div class="mt-1">
+              <div class="font-bold text-xs text-white leading-snug truncate">${node.title}</div>
+              <div class="text-xs text-slate-400 truncate mt-0.5">${node.subtitle}</div>
+            </div>
+          </div>
+        `;
+            });
+            nodesLayer.innerHTML = nodesHtml;
+
+            updateInspector();
+        }
+
+        function updateInspector() {
+            const node = NODES.find(n => n.id === activeNodeId) || NODES[0];
+            const seq = SCENARIOS[currentScenario];
+            const idxInSeq = seq.indexOf(node.id);
+
+            document.getElementById('insp-icon').textContent = node.icon;
+            document.getElementById('insp-badge').textContent = node.zone;
+            document.getElementById('insp-step-counter').textContent =
+                idxInSeq >= 0 ? `Step ${idxInSeq + 1} of ${seq.length}` : 'Node Inspect';
+            document.getElementById('insp-title').textContent = node.title;
+            document.getElementById('insp-desc').textContent = node.desc;
+
+            const isPassed = passedNodes.has(node.id);
+            const toggleBtn = document.getElementById('insp-toggle-btn');
+            if (isPassed) {
+                toggleBtn.textContent = '✓ Passed (Click to Grey Out)';
+                toggleBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30 transition shrink-0';
+            } else {
+                toggleBtn.textContent = '○ Greyed Out (Click to Pass)';
+                toggleBtn.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700 hover:text-white transition shrink-0';
+            }
+
+            const metaContainer = document.getElementById('insp-meta');
+            metaContainer.innerHTML = (node.tags || []).map(t =>
+                `<span class="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-xs text-slate-300 font-medium">${t}</span>`
+            ).join('');
+        }
+
+        function applyCamera(smooth = true) {
+            const world = document.getElementById('world');
+            if (smooth) world.classList.add('camera-transition');
+            else world.classList.remove('camera-transition');
+            world.style.transform = `translate(${camX}px, ${camY}px) scale(${camScale})`;
+        }
+
+        function focusNode(nodeId, zoomLevel = 1.05) {
+            const node = NODES.find(n => n.id === nodeId);
+            if (!node) return;
+            const viewport = document.getElementById('view-flow');
+            const vw = viewport.clientWidth || window.innerWidth;
+            const vh = viewport.clientHeight || (window.innerHeight - 70);
+
+            camScale = zoomLevel;
+            const nodeCenterX = node.x + NODE_WIDTH / 2;
+            const nodeCenterY = node.y + NODE_HEIGHT / 2;
+
+            camX = (vw / 2) - (nodeCenterX * camScale);
+            camY = (vh / 2) - (nodeCenterY * camScale) - 40;
+            applyCamera(true);
+        }
+
+        function fitOverview() {
+            stopAutoPlay();
+            const viewport = document.getElementById('view-flow');
+            const vw = viewport.clientWidth || window.innerWidth;
+            const vh = viewport.clientHeight || (window.innerHeight - 70);
+
+            const scaleX = (vw - 60) / 2680;
+            const scaleY = (vh - 80) / 1450;
+            camScale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.35), 0.95);
+            camX = 20;
+            camY = 10;
+            applyCamera(true);
+        }
+
+        function handleNodeClick(nodeId, evt) {
+            evt.stopPropagation();
+            stopAutoPlay();
+            if (activeNodeId === nodeId) {
+                if (passedNodes.has(nodeId)) passedNodes.delete(nodeId);
+                else passedNodes.add(nodeId);
+            } else {
+                activeNodeId = nodeId;
+                passedNodes.add(nodeId);
+                const seq = SCENARIOS[currentScenario];
+                const idx = seq.indexOf(nodeId);
+                if (idx !== -1) currentStepIdx = idx;
+                focusNode(nodeId, 1.05);
+            }
+            renderGraph();
+        }
+
+        function toggleCurrentNodePassed() {
+            if (passedNodes.has(activeNodeId)) passedNodes.delete(activeNodeId);
+            else passedNodes.add(activeNodeId);
+            renderGraph();
+        }
+
+        function setScenario(scen) {
+            stopAutoPlay();
+            currentScenario = scen;
+            ['all', 'scanner', 'food'].forEach(s => {
+                const btn = document.getElementById(`btn-scen-${s}`);
+                if (s === scen) {
+                    btn.className = 'px-2.5 py-1 rounded-md font-semibold bg-slate-800 text-amber-400 transition';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded-md font-medium text-slate-400 hover:text-white transition';
+                }
+            });
+            currentStepIdx = 0;
+            const seq = SCENARIOS[currentScenario];
+            passedNodes = new Set([seq[0]]);
+            activeNodeId = seq[0];
+            renderGraph();
+            focusNode(activeNodeId, 1.08);
+        }
+
+        function nextStep() {
+            const seq = SCENARIOS[currentScenario];
+            if (currentStepIdx < seq.length - 1) currentStepIdx++;
+            else {
+                currentStepIdx = 0;
+                passedNodes.clear();
+            }
+            const nextId = seq[currentStepIdx];
+            activeNodeId = nextId;
+            passedNodes.add(nextId);
+            renderGraph();
+            focusNode(nextId, 1.05);
+        }
+
+        function prevStep() {
+            stopAutoPlay();
+            const seq = SCENARIOS[currentScenario];
+            if (currentStepIdx > 0) {
+                passedNodes.delete(seq[currentStepIdx]);
+                currentStepIdx--;
+                activeNodeId = seq[currentStepIdx];
+                passedNodes.add(activeNodeId);
+                renderGraph();
+                focusNode(activeNodeId, 1.05);
+            }
+        }
+
+        function markAllPassed() {
+            stopAutoPlay();
+            NODES.forEach(n => passedNodes.add(n.id));
+            renderGraph();
+            fitOverview();
+        }
+
+        function resetAll() {
+            stopAutoPlay();
+            currentStepIdx = 0;
+            passedNodes = new Set(['login']);
+            activeNodeId = 'login';
+            renderGraph();
+            focusNode('login', 1.1);
+        }
+
+        function toggleAutoPlay() {
+            if (autoPlayTimer) {
+                stopAutoPlay();
+            } else {
+                document.getElementById('play-icon').textContent = '⏸';
+                document.getElementById('play-text').textContent = 'Pause Presentation';
+                focusNode(activeNodeId, 1.05);
+                autoPlayTimer = setInterval(() => {
+                    const seq = SCENARIOS[currentScenario];
+                    if (currentStepIdx >= seq.length - 1) {
+                        stopAutoPlay();
+                        fitOverview();
+                        return;
+                    }
+                    nextStep();
+                }, 2100);
+            }
+        }
+
+        function stopAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+            }
+            document.getElementById('play-icon').textContent = '▶';
+            document.getElementById('play-text').textContent = 'Present Flow';
+        }
+
+        // =========================================================================
+        // 4. VIEW SWITCHING & LIVE APP PROTOTYPE LOGIC
+        // =========================================================================
+        function switchMainView(view) {
+            stopAutoPlay();
+            const flowView = document.getElementById('view-flow');
+            const appView = document.getElementById('view-app');
+            const flowToolbar = document.getElementById('flow-toolbar');
+            const tabFlow = document.getElementById('tab-main-flow');
+            const tabApp = document.getElementById('tab-main-app');
+
+            if (view === 'flow') {
+                flowView.classList.remove('hidden');
+                appView.classList.add('hidden');
+                flowToolbar.classList.remove('hidden');
+                tabFlow.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow';
+                tabApp.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white';
+                setTimeout(() => focusNode(activeNodeId, 1.05), 80);
+            } else {
+                flowView.classList.add('hidden');
+                appView.classList.remove('hidden');
+                flowToolbar.classList.add('hidden');
+                tabApp.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow';
+                tabFlow.className = 'px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white';
+                renderOrderingDishes();
+                renderOrdersQueue();
+                renderAdminStockTable();
+            }
+        }
+
+        function showAppScreen(screenName) {
+            const screens = ['login', 'launcher', 'scanner', 'ordering', 'processing', 'admin'];
+            screens.forEach(s => {
+                const el = document.getElementById(`screen-${s}`);
+                const tab = document.getElementById(`subtab-${s}`);
+                if (s === screenName) {
+                    el.classList.remove('hidden');
+                    tab.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center gap-1.5';
+                } else {
+                    el.classList.add('hidden');
+                    tab.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800 flex items-center gap-1.5';
+                }
+            });
+
+            if (screenName === 'ordering') renderOrderingDishes();
+            if (screenName === 'processing') renderOrdersQueue();
+            if (screenName === 'admin') renderAdminStockTable();
+        }
+
+        function openLiveScreenForActiveNode() {
+            const node = NODES.find(n => n.id === activeNodeId) || NODES[0];
+            switchMainView('app');
+            showAppScreen(node.appScreen || 'launcher');
+        }
+
+        // --- QR Scanner & Post-Registration Logic ---
+        function simulateQrScan(mode) {
+            const titleEl = document.getElementById('scan-status-title');
+            const subEl = document.getElementById('scan-status-sub');
+            const resCard = document.getElementById('scan-result-card');
+            const postRegPanel = document.getElementById('post-reg-panel');
+
+            if (mode === 'valid') {
+                titleEl.textContent = '✓ QR Code Verified!';
+                titleEl.className = 'text-xs font-bold text-emerald-400';
+                subEl.textContent = 'Pre-Registered Ticket #REN-0891';
+                resCard.className = 'mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30';
+                document.getElementById('scan-guest-name').textContent = 'Ngozi Okafor (Pre-Registered)';
+                document.getElementById('scan-guest-seat').textContent = 'Table 12 • Seat 4';
+                const statEl = document.getElementById('stat-checked-in');
+                statEl.textContent = (parseInt(statEl.textContent.replace(/,/g, ''), 10) + 1).toLocaleString();
+                postRegPanel.classList.remove('border-amber-500');
+            } else {
+                titleEl.textContent = '⚠ Unregistered / Walk-In Guest';
+                titleEl.className = 'text-xs font-bold text-amber-400';
+                subEl.textContent = 'Redirected to Post-Registration Form →';
+                resCard.className = 'mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/40';
+                document.getElementById('scan-guest-name').textContent = 'Walk-In Guest Detected';
+                document.getElementById('scan-guest-seat').textContent = 'Complete Post-Registration on the right →';
+                postRegPanel.classList.add('border-amber-500');
+                document.getElementById('postreg-name').focus();
+            }
+        }
+
+        function completePostRegistration() {
+            const name = document.getElementById('postreg-name').value.trim() || 'Amina Bello';
+            const table = document.getElementById('postreg-table').value;
+            const seat = document.getElementById('postreg-seat').value;
+
+            document.getElementById('scan-guest-name').textContent = `${name} (Post-Registered ✓)`;
+            document.getElementById('scan-guest-seat').textContent = `Table ${table} • Seat ${seat}`;
+            document.getElementById('scan-result-card').className = 'mt-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40';
+
+            const postStat = document.getElementById('stat-post-reg');
+            postStat.textContent = parseInt(postStat.textContent, 10) + 1;
+            const checkStat = document.getElementById('stat-checked-in');
+            checkStat.textContent = (parseInt(checkStat.textContent.replace(/,/g, ''), 10) + 1).toLocaleString();
+
+            // Pre-fill ordering form with this guest
+            document.getElementById('order-name').value = name;
+        }
+
+        // --- Food Ordering & Auto Sold-Out Grey-Out Logic ---
+        function switchMealCategory(cat) {
+            selectedCategory = cat;
+            const btnNig = document.getElementById('cat-btn-nigerian');
+            const btnCont = document.getElementById('cat-btn-continental');
+            const title = document.getElementById('dish-section-title');
+
+            if (cat === 'nigerian') {
+                btnNig.className = 'cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-amber-600 bg-amber-50/70 transition';
+                btnCont.className = 'cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-slate-50 transition';
+                title.innerHTML = '5. Select Your Nigerian Meal Preference <span class="text-rose-600">*</span>';
+            } else {
+                btnCont.className = 'cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-amber-600 bg-amber-50/70 transition';
+                btnNig.className = 'cursor-pointer flex items-center justify-between p-3.5 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-slate-50 transition';
+                title.innerHTML = '7. Select Your Continental Meal Preference <span class="text-rose-600">*</span>';
+            }
+
+            const firstAvail = MENU_ITEMS.find(i => i.cat === cat && i.stock > 0);
+            if (firstAvail) selectedDishId = firstAvail.id;
+            renderOrderingDishes();
+        }
+
+        function renderOrderingDishes() {
+            const container = document.getElementById('dishes-list-container');
+            const items = MENU_ITEMS.filter(i => i.cat === selectedCategory);
+
+            container.innerHTML = items.map(item => {
+                const isSoldOut = item.stock <= 0;
+                const isSelected = selectedDishId === item.id && !isSoldOut;
+
+                if (isSoldOut) {
+                    return `
+            <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-100 opacity-50 grayscale cursor-not-allowed select-none">
+              <div class="flex items-center gap-2.5">
+                <input type="radio" disabled class="w-4 h-4" />
+                <span class="text-xs font-semibold text-slate-500 line-through">${item.name}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-xs uppercase shrink-0">
+                Sold Out (0)
+              </span>
+            </div>
+          `;
+                }
+
+                return `
+          <label onclick="selectDish('${item.id}')" class="cursor-pointer flex items-center justify-between p-3 rounded-xl border-2 ${isSelected ? 'border-amber-600 bg-amber-50/60' : 'border-slate-200 hover:border-slate-300 bg-white'} transition">
+            <div class="flex items-center gap-2.5">
+              <input type="radio" name="dish_choice" ${isSelected ? 'checked' : ''} class="w-4 h-4 accent-amber-600" />
+              <span class="text-xs font-bold text-slate-800">${item.name}</span>
+            </div>
+            <span class="px-2 py-0.5 rounded ${item.stock <= 10 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'} font-bold text-xs shrink-0">
+              ${item.stock} plates
+            </span>
+          </label>
+        `;
+            }).join('');
+        }
+
+        function selectDish(dishId) {
+            selectedDishId = dishId;
+            renderOrderingDishes();
+        }
+
+        function submitFoodOrder() {
+            const dish = MENU_ITEMS.find(i => i.id === selectedDishId);
+            if (!dish || dish.stock <= 0) {
+                alert('Please select an available dish.');
+                return;
+            }
+
+            // Decrement plate stock
+            dish.stock = Math.max(0, dish.stock - 1);
+
+            const guest = document.getElementById('order-name').value.trim() || 'Guest';
+            const table = document.getElementById('order-table').value;
+            const seat = document.getElementById('order-seat').value;
+
+            const sides = Array.from(document.querySelectorAll('.side-check:checked')).map(el => el.value).slice(0, 2);
+            const proteins = Array.from(document.querySelectorAll('.protein-check:checked')).map(el => el.value).slice(0, 2);
+
+            const newOrder = {
+                id: 'ORD-' + (1115 + ORDERS_QUEUE.length),
+                guest,
+                table,
+                seat,
+                category: selectedCategory === 'nigerian' ? 'Nigerian Dishes' : 'Continental Dishes',
+                dish: dish.name,
+                sides: sides.length ? sides : ['None'],
+                proteins: proteins.length ? proteins : ['None'],
+                time: 'Just Now',
+                status: 'Pending Print'
+            };
+
+            ORDERS_QUEUE.unshift(newOrder);
+            activeOrderId = newOrder.id;
+            document.getElementById('badge-order-count').textContent = ORDERS_QUEUE.length;
+
+            const fb = document.getElementById('order-feedback');
+            fb.textContent = `✓ Order ${newOrder.id} submitted! Plate stock updated (${dish.stock} left). Routing to Kitchen...`;
+
+            renderOrderingDishes();
+            setTimeout(() => {
+                showAppScreen('processing');
+            }, 900);
+        }
+
+        // --- Customer 2: Kitchen Order Processing & Printing ---
+        function renderOrdersQueue() {
+            const listEl = document.getElementById('orders-queue-list');
+            listEl.innerHTML = ORDERS_QUEUE.map(o => {
+                const isSelected = o.id === activeOrderId;
+                const isPrinted = o.status.includes('Printed');
+                return `
+          <div onclick="selectOrderForDocket('${o.id}')" class="cursor-pointer p-3.5 rounded-xl border-2 ${isSelected ? 'border-amber-500 bg-slate-800/90' : 'border-slate-800 bg-slate-950 hover:border-slate-700'} transition flex items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-xs text-amber-400">${o.id}</span>
+                <span class="font-bold text-sm text-white">${o.guest}</span>
+                <span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold text-xs">${o.table} • ${o.seat}</span>
+              </div>
+              <div class="text-xs text-emerald-400 font-semibold mt-1">${o.dish}</div>
+              <div class="text-xs text-slate-400 mt-0.5">
+                Sides: ${o.sides.join(', ')} • Proteins: ${o.proteins.join(', ')}
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold ${isPrinted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}">
+                ${o.status}
+              </span>
+              <div class="text-xs text-slate-500 mt-1">${o.time}</div>
+            </div>
+          </div>
+        `;
+            }).join('');
+
+            renderDocketPreview();
+        }
+
+        function selectOrderForDocket(orderId) {
+            activeOrderId = orderId;
+            renderOrdersQueue();
+        }
+
+        function renderDocketPreview() {
+            const order = ORDERS_QUEUE.find(o => o.id === activeOrderId) || ORDERS_QUEUE[0];
+            const docketEl = document.getElementById('docket-preview');
+            if (!order) return;
+
+            docketEl.innerHTML = `
+        <div class="text-center border-b-2 border-dashed border-slate-300 pb-3">
+          <div class="font-black text-sm tracking-tight">RENAISSANCE END OF YEAR PARTY</div>
+          <div class="text-xs text-slate-500">KITCHEN &amp; WAITER DISPATCH SLIP</div>
+          <div class="mt-1 font-bold text-xs bg-slate-900 text-white py-1 px-2 rounded inline-block">
+            ${order.table.toUpperCase()} — ${order.seat.toUpperCase()}
+          </div>
+        </div>
+
+        <div class="space-y-1 text-xs border-b border-dashed border-slate-300 pb-2">
+          <div class="flex justify-between"><span>ORDER NO:</span><strong>${order.id}</strong></div>
+          <div class="flex justify-between"><span>GUEST:</span><strong>${order.guest}</strong></div>
+          <div class="flex justify-between"><span>CATEGORY:</span><strong>${order.category}</strong></div>
+          <div class="flex justify-between"><span>TIME:</span><span>${order.time}</span></div>
+        </div>
+
+        <div class="space-y-2 py-1 border-b border-dashed border-slate-300">
+          <div>
+            <div class="text-slate-500 text-xs">MAIN DISH:</div>
+            <div class="font-extrabold text-sm text-slate-900">1x ${order.dish}</div>
+          </div>
+          <div>
+            <div class="text-slate-500 text-xs">PREFERRED SIDES (MAX 2):</div>
+            <div class="font-bold text-xs text-slate-800">+ ${order.sides.join(', ')}</div>
+          </div>
+          <div>
+            <div class="text-slate-500 text-xs">PROTEINS (MAX 2):</div>
+            <div class="font-bold text-xs text-slate-800">+ ${order.proteins.join(', ')}</div>
+          </div>
+        </div>
+
+        <div class="text-center pt-1">
+          <div class="font-bold text-xs uppercase">${order.status}</div>
+          <div class="text-xs text-slate-400 mt-1">Deliver straight to ${order.table}, ${order.seat}</div>
+        </div>
+      `;
+        }
+
+        function printActiveDocket() {
+            const order = ORDERS_QUEUE.find(o => o.id === activeOrderId);
+            if (!order) return;
+            order.status = 'Printed ✓';
+            renderOrdersQueue();
+        }
+
+        // --- Backend Admin Stock Control ---
+        function renderAdminStockTable() {
+            const container = document.getElementById('admin-stock-table');
+            container.innerHTML = MENU_ITEMS.map(item => {
+                const isSoldOut = item.stock <= 0;
+                return `
+          <div class="p-3.5 rounded-xl bg-slate-950 border ${isSoldOut ? 'border-rose-500/50' : 'border-slate-800'} flex items-center justify-between gap-2">
+            <div>
+              <span class="text-xs uppercase font-bold px-2 py-0.5 rounded ${item.cat === 'nigerian' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-blue-500/15 text-blue-400'}">
+                ${item.cat}
+              </span>
+              <div class="text-xs font-bold text-white mt-1">${item.name}</div>
+              <div class="text-xs ${isSoldOut ? 'text-rose-400 font-bold' : 'text-slate-400'} mt-0.5">
+                ${isSoldOut ? '🚫 SOLD OUT (Greyed out on Ordering Form)' : `Available: ${item.stock} plates`}
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button onclick="adjustStock('${item.id}', 25)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs transition">
+                +25
+              </button>
+              <button onclick="adjustStock('${item.id}', -item.stock)" class="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-bold text-xs transition">
+                Force 0 (Sold Out)
+              </button>
+            </div>
+          </div>
+        `;
+            }).join('');
+        }
+
+        function adjustStock(itemId, delta) {
+            const item = MENU_ITEMS.find(i => i.id === itemId);
+            if (!item) return;
+            if (delta < 0 && Math.abs(delta) === item.stock) item.stock = 0;
+            else item.stock = Math.max(0, item.stock + delta);
+            renderAdminStockTable();
+            renderOrderingDishes();
+        }
+
+        function addNewDishFromAdmin() {
+            const nameInput = document.getElementById('new-dish-name');
+            const catInput = document.getElementById('new-dish-cat');
+            const stockInput = document.getElementById('new-dish-stock');
+
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            MENU_ITEMS.unshift({
+                id: 'custom_' + Date.now(),
+                cat: catInput.value,
+                name,
+                stock: parseInt(stockInput.value, 10) || 50
+            });
+            nameInput.value = '';
+            renderAdminStockTable();
+            renderOrderingDishes();
+        }
+
+        // =========================================================================
+        // 5. MOUSE DRAG PAN & WHEEL ZOOM FOR THE FLOW CANVAS
+        // =========================================================================
+        const viewportEl = document.getElementById('view-flow');
+
+        viewportEl.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.node-card') || e.target.closest('#inspector-card')) return;
+            stopAutoPlay();
+            isDragging = true;
+            dragStartX = e.clientX - camX;
+            dragStartY = e.clientY - camY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            camX = e.clientX - dragStartX;
+            camY = e.clientY - dragStartY;
+            applyCamera(false);
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        viewportEl.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            stopAutoPlay();
+            const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+            const newScale = Math.min(Math.max(camScale * zoomFactor, 0.3), 1.6);
+
+            const rect = viewportEl.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            camX = mouseX - ((mouseX - camX) / camScale) * newScale;
+            camY = mouseY - ((mouseY - camY) / camScale) * newScale;
+            camScale = newScale;
+            applyCamera(false);
+        }, { passive: false });
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderGraph();
+            renderOrderingDishes();
+            renderOrdersQueue();
+            renderAdminStockTable();
+            setTimeout(() => {
+                focusNode('login', 1.1);
+            }, 150);
+        });
+    </script>
+</body>
+
+</html>

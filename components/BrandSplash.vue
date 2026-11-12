@@ -1,0 +1,104 @@
+<template>
+  <Transition
+    enter-active-class="transition-opacity duration-300"
+    enter-from-class="opacity-0"
+    enter-to-class="opacity-100"
+    leave-active-class="transition-all duration-700 ease-out"
+    leave-from-class="opacity-100 scale-100"
+    leave-to-class="opacity-0 scale-105"
+  >
+    <div
+      v-if="visible"
+      @click="dismiss"
+      class="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 cursor-pointer select-none transition-colors"
+      :class="isDark ? 'bg-[#090d16]' : 'bg-white'"
+      role="status"
+      aria-label="Renaissance Event Platform Loading"
+    >
+      <div class="relative flex flex-col items-center justify-center max-w-md w-full">
+        <!-- Ambient glow behind logo -->
+        <div
+          class="absolute w-64 h-64 rounded-full bg-gradient-to-tr from-emerald-500/20 via-orange-500/20 to-yellow-400/20 blur-3xl animate-pulse pointer-events-none"
+        ></div>
+
+        <!-- Clean Official Renaissance Logo (Light / Dark) -->
+        <div
+          class="relative z-10 transition-all duration-700"
+          :class="step >= 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
+        >
+          <img
+            :src="isDark ? '/images/brand/renaissance-logo-dark.jpg' : '/images/brand/renaissance-logo-light.jpg'"
+            alt="Renaissance"
+            class="w-72 sm:w-96 h-auto object-contain rounded-2xl mx-auto"
+          />
+        </div>
+
+        <!-- Renaissance 4-Color Progress Bar (Guaranteed Left-to-Right Fill + Gradient Sweep) -->
+        <div class="relative z-10 mt-6 w-52 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+          <div class="splash-gradient-bar h-full rounded-full"></div>
+        </div>
+
+        <span class="relative z-10 mt-3 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+          Tap anywhere to continue
+        </span>
+      </div>
+    </div>
+  </Transition>
+</template>
+
+<script setup lang="ts">
+const { isDark } = useEventSuite()
+
+const splashPlayed = useState<boolean>('ren-splash-played', () => false)
+const visible = ref(false)
+const step = ref(0)
+
+let t1: ReturnType<typeof setTimeout> | null = null
+
+const dismiss = () => {
+  visible.value = false
+  splashPlayed.value = true
+}
+
+onMounted(() => {
+  if (splashPlayed.value) return
+  visible.value = true
+  requestAnimationFrame(() => {
+    step.value = 1
+  })
+  t1 = setTimeout(() => {
+    dismiss()
+  }, 2800)
+})
+
+onBeforeUnmount(() => {
+  if (t1) clearTimeout(t1)
+})
+</script>
+
+<style scoped>
+.splash-gradient-bar {
+  width: 0%;
+  background: linear-gradient(90deg, #008751 0%, #f97316 25%, #facc15 50%, #dc2626 75%, #008751 100%);
+  background-size: 200% 100%;
+  animation: splashFill 2.6s cubic-bezier(0.22, 1, 0.36, 1) forwards, gradientSweep 1.6s linear infinite;
+}
+
+@keyframes splashFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes gradientSweep {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+</style>
