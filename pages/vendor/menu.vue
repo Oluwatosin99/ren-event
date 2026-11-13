@@ -399,6 +399,16 @@
                 <VIcon name="edit" size="xs" />
                 <span>Upload / Edit Pic</span>
               </button>
+
+              <button
+                @click="deleteDish(item)"
+                type="button"
+                class="px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30 font-bold text-[11px] transition flex items-center gap-1"
+                title="Delete this dish from the menu"
+              >
+                <VIcon name="trash" size="xs" />
+                <span>Delete</span>
+              </button>
             </div>
 
             <div class="flex flex-wrap items-center gap-1.5">
@@ -518,13 +528,24 @@
             </div>
           </div>
 
-          <div class="flex justify-end gap-2 pt-2">
-            <button @click="editingDish = null" type="button" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
-              Cancel
+          <div class="flex items-center justify-between gap-2 pt-2">
+            <button
+              @click="deleteDishFromModal"
+              type="button"
+              class="px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 font-bold text-xs transition flex items-center gap-1.5"
+            >
+              <VIcon name="trash" size="xs" />
+              <span>Delete Dish</span>
             </button>
-            <button @click="saveEditedDish" type="button" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow">
-              Save Changes
-            </button>
+
+            <div class="flex items-center gap-2">
+              <button @click="editingDish = null" type="button" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs">
+                Cancel
+              </button>
+              <button @click="saveEditedDish" type="button" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow">
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -690,6 +711,27 @@ const forceZeroStock = async (itemId: string) => {
     action: 'update_stock',
     itemId,
     exactStock: 0
+  })
+}
+
+const deleteDish = async (item: MenuItem) => {
+  const confirmed = window.confirm(`Are you sure you want to delete "${item.name}" from the menu?`)
+  if (!confirmed) return
+  await updateMenuOrStock({
+    action: 'delete_dish',
+    itemId: item.id
+  })
+}
+
+const deleteDishFromModal = async () => {
+  if (!editingDish.value) return
+  const confirmed = window.confirm(`Are you sure you want to delete "${editingDish.value.name}" from the menu?`)
+  if (!confirmed) return
+  const id = editingDish.value.id
+  editingDish.value = null
+  await updateMenuOrStock({
+    action: 'delete_dish',
+    itemId: id
   })
 }
 </script>

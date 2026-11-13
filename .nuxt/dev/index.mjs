@@ -711,8 +711,12 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
+    "supabaseUrl": "https://ggohezsainzfzhqserls.supabase.co",
+    "supabaseKey": "sb_publishable_PHF3Et730xu8l5ZYIE9b6w_K8UCiRKJ",
     "allowOrderOverride": true
-  }
+  },
+  "supabaseUrl": "https://ggohezsainzfzhqserls.supabase.co",
+  "supabaseKey": "sb_publishable_PHF3Et730xu8l5ZYIE9b6w_K8UCiRKJ"
 };
 const envOptions = {
   prefix: "NITRO_",
@@ -4012,6 +4016,18 @@ const menu_post = defineEventHandler(async (event) => {
       SET stock = ?, initial_stock = ?, threshold = ?, manual_closed = ?, updated_at = ?
       WHERE id = ?
     `).run(nextStock, nextInitial, nextThreshold, nextClosed, now, body.itemId);
+    return { ok: true, state: getFullEventState() };
+  }
+  if (body.action === "delete_dish") {
+    const itemId = String(body.itemId || "").trim();
+    if (!itemId) {
+      throw createError({ statusCode: 400, statusMessage: "Dish ID is required" });
+    }
+    const item = db.prepare("SELECT id FROM menu_items WHERE id = ?").get(itemId);
+    if (!item) {
+      throw createError({ statusCode: 404, statusMessage: "Dish not found" });
+    }
+    db.prepare("DELETE FROM menu_items WHERE id = ?").run(itemId);
     return { ok: true, state: getFullEventState() };
   }
   throw createError({ statusCode: 400, statusMessage: "Invalid menu action" });

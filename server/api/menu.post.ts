@@ -136,5 +136,20 @@ export default defineEventHandler(async (event) => {
     return { ok: true, state: getFullEventState() }
   }
 
+  if (body.action === 'delete_dish') {
+    const itemId = String(body.itemId || '').trim()
+    if (!itemId) {
+      throw createError({ statusCode: 400, statusMessage: 'Dish ID is required' })
+    }
+
+    const item = db.prepare('SELECT id FROM menu_items WHERE id = ?').get(itemId) as any
+    if (!item) {
+      throw createError({ statusCode: 404, statusMessage: 'Dish not found' })
+    }
+
+    db.prepare('DELETE FROM menu_items WHERE id = ?').run(itemId)
+    return { ok: true, state: getFullEventState() }
+  }
+
   throw createError({ statusCode: 400, statusMessage: 'Invalid menu action' })
 })

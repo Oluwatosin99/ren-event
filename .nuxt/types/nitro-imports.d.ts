@@ -70,6 +70,7 @@ declare global {
   const getRouterParam: typeof import('../../node_modules/h3/dist/index').getRouterParam
   const getRouterParams: typeof import('../../node_modules/h3/dist/index').getRouterParams
   const getSession: typeof import('../../node_modules/h3/dist/index').getSession
+  const getSupabase: typeof import('../../server/utils/supabase').getSupabase
   const getValidatedQuery: typeof import('../../node_modules/h3/dist/index').getValidatedQuery
   const getValidatedRouterParams: typeof import('../../node_modules/h3/dist/index').getValidatedRouterParams
   const handleCacheHeaders: typeof import('../../node_modules/h3/dist/index').handleCacheHeaders
@@ -155,3 +156,4 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from 'C:/Users/Oluwatosin.Dawodu/REN Event/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths';
 export { defineAppConfig } from 'C:/Users/Oluwatosin.Dawodu/REN Event/node_modules/@nuxt/nitro-server/dist/runtime/utils/config';
 export { inferSubCat, getDb, setTimingMetric, getFullEventState } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/db';
+export { getSupabase } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/supabase';

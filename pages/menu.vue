@@ -1,24 +1,20 @@
 <template>
   <div class="max-w-5xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8">
-    <!-- App Header Banner (Renaissance Green + Orange + Yellow + Red Accent) -->
-    <div class="relative rounded-3xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-orange-600 p-5 sm:p-8 text-white shadow-xl overflow-hidden mb-6 border border-emerald-500/30">
-      <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-yellow-400/20 rounded-full blur-2xl pointer-events-none"></div>
+    <!-- App Header Banner (Option 2: Ambient Aurora Glass Glow, no repetitive logo) -->
+    <div class="relative rounded-3xl p-1 sm:p-1.5 mb-6 overflow-hidden">
+      <!-- Diffused atmospheric aurora glow behind frosted glass -->
+      <div class="absolute -inset-4 bg-gradient-to-r from-emerald-500/25 via-emerald-400/15 to-orange-500/25 blur-2xl pointer-events-none"></div>
 
-      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="bg-white/95 dark:bg-slate-950/90 text-slate-900 dark:text-white rounded-2xl p-4 sm:p-5 max-w-xl shadow-lg backdrop-blur">
+      <div class="relative rounded-[22px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-white/10 p-5 sm:p-7 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="max-w-xl">
           <div class="flex flex-wrap items-center gap-2 mb-2">
-            <img
-              :src="isDark ? '/images/brand/logo-mark-dark.svg' : '/images/brand/logo-mark-light.svg'"
-              alt="Renaissance Event"
-              class="w-7 h-7 object-contain shrink-0"
-            />
             <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
               <VIcon name="utensils" size="xs" />
               <span>Order Your Food</span>
             </span>
             <span class="text-[11px] font-bold text-orange-600 dark:text-orange-400">Live Plate Availability</span>
           </div>
-          <h1 class="text-xl sm:text-2xl font-black tracking-tight">
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Renaissance End of Year Party Menu
           </h1>
           <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -150,25 +146,25 @@
       </div>
 
       <!-- Main Category Toggle Buttons (Nigerian vs Continental) -->
-      <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+      <div class="grid grid-cols-2 gap-2 sm:gap-4 mb-4">
         <button
           type="button"
           @click="selectCategory('nigerian')"
-          class="p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between"
+          class="p-2.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between gap-1.5 sm:gap-2 min-w-0"
           :class="selectedCategory === 'nigerian'
             ? 'border-emerald-600 bg-emerald-500/10 shadow-sm'
             : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'"
         >
-          <div class="flex items-center gap-2.5 sm:gap-3">
-            <div class="p-2 rounded-xl bg-emerald-600 text-white shrink-0">
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div class="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-600 text-white shrink-0">
               <VIcon name="utensils" size="sm" />
             </div>
-            <div>
-              <div class="font-black text-xs sm:text-sm text-slate-900 dark:text-white">Nigerian Dishes</div>
+            <div class="min-w-0">
+              <div class="font-black text-[11px] leading-tight sm:text-sm text-slate-900 dark:text-white">Nigerian Dishes</div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Jollof, Ofada, Afang, Egusi, Amala</div>
             </div>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+          <span class="shrink-0 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
             {{ nigerianDishesCount }}
           </span>
         </button>
@@ -176,21 +172,21 @@
         <button
           type="button"
           @click="selectCategory('continental')"
-          class="p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between"
+          class="p-2.5 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between gap-1.5 sm:gap-2 min-w-0"
           :class="selectedCategory === 'continental'
             ? 'border-orange-500 bg-orange-500/10 shadow-sm'
             : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'"
         >
-          <div class="flex items-center gap-2.5 sm:gap-3">
-            <div class="p-2 rounded-xl bg-orange-500 text-white shrink-0">
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div class="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-orange-500 text-white shrink-0">
               <VIcon name="star" size="sm" />
             </div>
-            <div>
-              <div class="font-black text-xs sm:text-sm text-slate-900 dark:text-white">Continental Dishes</div>
+            <div class="min-w-0">
+              <div class="font-black text-[11px] leading-tight sm:text-sm text-slate-900 dark:text-white">Continental Dishes</div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">Oriental, Jambalaya, Prawns, Noodles</div>
             </div>
           </div>
-          <span class="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-orange-500/20 text-orange-700 dark:text-orange-300">
+          <span class="shrink-0 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-orange-500/20 text-orange-700 dark:text-orange-300">
             {{ continentalDishesCount }}
           </span>
         </button>
@@ -961,7 +957,7 @@ const orderForm = reactive({
 const selectedCategory = ref<'nigerian' | 'continental'>('nigerian')
 const selectedSubCat = ref<'all' | MenuSubCat>('all')
 const selectedFlavorTag = ref<string>('All')
-const menuViewMode = ref<'grid' | 'list' | 'grouped'>('grid')
+const menuViewMode = ref<'grid' | 'list' | 'grouped'>('list')
 const selectedDishId = ref<string>('nig_1')
 const searchQuery = ref('')
 const selectedSides = ref<string[]>(['Moi Moi', 'Plantain'])

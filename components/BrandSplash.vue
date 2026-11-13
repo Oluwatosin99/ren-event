@@ -3,9 +3,9 @@
     enter-active-class="transition-opacity duration-300"
     enter-from-class="opacity-0"
     enter-to-class="opacity-100"
-    leave-active-class="transition-all duration-700 ease-out"
-    leave-from-class="opacity-100 scale-100"
-    leave-to-class="opacity-0 scale-105"
+    leave-active-class="transition-opacity duration-500 ease-out pointer-events-none"
+    leave-from-class="opacity-100"
+    leave-to-class="opacity-0"
   >
     <div
       v-if="visible"
@@ -16,9 +16,10 @@
       aria-label="Renaissance Event Platform Loading"
     >
       <div class="relative flex flex-col items-center justify-center max-w-md w-full">
-        <!-- Ambient glow behind logo -->
+        <!-- Soft radial glow behind logo (no CSS blur filter to avoid iOS Safari black tile glitch) -->
         <div
-          class="absolute w-64 h-64 rounded-full bg-gradient-to-tr from-emerald-500/20 via-orange-500/20 to-yellow-400/20 blur-3xl animate-pulse pointer-events-none"
+          class="absolute w-64 h-64 rounded-full pointer-events-none opacity-60"
+          style="background: radial-gradient(circle, rgba(16,185,129,0.14) 0%, rgba(249,115,22,0.10) 45%, transparent 70%);"
         ></div>
 
         <!-- Clean Official Renaissance Logo (Light / Dark) -->

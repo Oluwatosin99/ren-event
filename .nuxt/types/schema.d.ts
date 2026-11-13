@@ -11,11 +11,19 @@ import { NuxtModule, ModuleDependencyMeta } from '@nuxt/schema'
       cdnURL: string,
    },
 
+   supabaseUrl: string,
+
+   supabaseKey: string,
+
    nitro: {
       envPrefix: string,
    },
   }
   interface SharedPublicRuntimeConfig {
+   supabaseUrl: string,
+
+   supabaseKey: string,
+
    allowOrderOverride: boolean,
   }
 declare module '@nuxt/schema' {
