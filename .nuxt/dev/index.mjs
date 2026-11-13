@@ -8,6 +8,7 @@ import { escapeHtml } from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_m
 import viteNodeEntry_mjs from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_modules/@nuxt/vite-builder/dist/vite-node-entry.mjs';
 import { viteNodeFetch } from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_modules/@nuxt/vite-builder/dist/vite-node.mjs';
 import { promises, mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createClient } from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_modules/@supabase/supabase-js/dist/index.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withQuery, getQuery, withoutBase, joinURL, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, encodePath, joinRelativeURL } from 'file://C:/Users/Oluwatosin.Dawodu/REN%20Event/node_modules/ufo/dist/index.mjs';
@@ -2328,7 +2329,22 @@ const plugins = [
 _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 ];
 
-const assets = {};
+const assets = {
+  "/index.mjs": {
+    "type": "text/javascript; charset=utf-8",
+    "etag": "\"2d689-RIfJiL7kITHHcEPN69f7CvDIFfE\"",
+    "mtime": "2026-11-13T11:55:19.386Z",
+    "size": 185993,
+    "path": "index.mjs"
+  },
+  "/index.mjs.map": {
+    "type": "application/json",
+    "etag": "\"b6365-2tvJ+4tJ0ff91VczdUR538HnZA4\"",
+    "mtime": "2026-11-13T11:55:19.387Z",
+    "size": 746341,
+    "path": "index.mjs.map"
+  }
+};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));
@@ -4104,6 +4120,302 @@ const orders_patch$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: orders_patch
 }, Symbol.toStringTag, { value: 'Module' }));
 
+let supabaseClient = null;
+function getSupabase() {
+  var _a, _b;
+  if (supabaseClient) return supabaseClient;
+  const config = useRuntimeConfig();
+  const url = (config.supabaseUrl || ((_a = config.public) == null ? void 0 : _a.supabaseUrl) || process.env.SUPABASE_URL || "").trim();
+  const key = (config.supabaseKey || ((_b = config.public) == null ? void 0 : _b.supabaseKey) || process.env.SUPABASE_KEY || "").trim();
+  if (!url || !key) {
+    return null;
+  }
+  try {
+    supabaseClient = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+    return supabaseClient;
+  } catch (err) {
+    console.warn("[Supabase] Failed to initialize client, fallback will use local SQLite:", err);
+    return null;
+  }
+}
+
+async function submitOrderToSupabase(payload) {
+  var _a, _b;
+  const sb = getSupabase();
+  if (!sb) return { ok: false, error: "Database connection offline" };
+  const cleanTable = payload.table.startsWith("Table") ? payload.table : `Table ${payload.table}`;
+  const cleanSeat = payload.seat.startsWith("Seat") ? payload.seat : `Seat ${payload.seat}`;
+  const shortT = cleanTable.replace(/\D/g, "") || "1";
+  const shortS = cleanSeat.replace(/\D/g, "") || "1";
+  const now = Date.now();
+  const timeLabel = (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (!payload.devOverride) {
+    const { data: existingSeat } = await sb.from("orders").select("*").eq("table_no", cleanTable).eq("seat_no", cleanSeat).order("created_at", { ascending: false }).limit(1);
+    if (existingSeat && existingSeat.length > 0) {
+      const ex = existingSeat[0];
+      const orderObj = {
+        id: ex.id,
+        guest: ex.guest_name,
+        ticketId: ex.ticket_id || void 0,
+        table: ex.table_no,
+        seat: ex.seat_no,
+        category: ex.category,
+        dishId: ex.dish_id,
+        dish: ex.dish_name,
+        sides: typeof ex.sides_json === "string" ? JSON.parse(ex.sides_json || "[]") : ex.sides_json,
+        proteins: typeof ex.proteins_json === "string" ? JSON.parse(ex.proteins_json || "[]") : ex.proteins_json,
+        time: ex.time_label || "Just now",
+        createdAt: Number(ex.created_at || now),
+        status: ex.status || "unprocessed",
+        printCount: Number(ex.print_count || 0),
+        qrToken: ex.qr_token
+      };
+      return {
+        ok: false,
+        alreadyOrdered: true,
+        order: orderObj,
+        error: `A meal has already been ordered for ${cleanTable} \u2022 ${cleanSeat}.`
+      };
+    }
+  }
+  const { data: dishRows, error: dishErr } = await sb.from("menu_items").select("*").eq("id", payload.dishId).limit(1);
+  if (dishErr || !dishRows || dishRows.length === 0) {
+    return { ok: false, error: "Selected dish not found." };
+  }
+  const dish = dishRows[0];
+  if (dish.manual_closed || Number(dish.stock) <= 0) {
+    return {
+      ok: false,
+      error: `"${dish.name}" just ran out of plates (SOLD OUT). Please pick another available dish.`
+    };
+  }
+  await sb.from("menu_items").update({ stock: Math.max(0, Number(dish.stock) - 1), updated_at: now }).eq("id", dish.id);
+  const { count } = await sb.from("orders").select("*", { count: "exact", head: true });
+  const orderNum = 1115 + (count || 0);
+  const orderId = `ORD-${orderNum}`;
+  const qrToken = `REN-${orderId}-T${shortT}S${shortS}`;
+  const cleanSides = payload.sides.length ? payload.sides.slice(0, 2) : ["None"];
+  const cleanProteins = payload.proteins.length ? payload.proteins.slice(0, 2) : ["None"];
+  const categoryLabel = dish.cat === "nigerian" ? "Nigerian Dishes" : "Continental Dishes";
+  const { error: insErr } = await sb.from("orders").insert({
+    id: orderId,
+    guest_name: payload.guest.trim(),
+    ticket_id: ((_a = payload.ticketId) == null ? void 0 : _a.trim()) || null,
+    table_no: cleanTable,
+    seat_no: cleanSeat,
+    category: categoryLabel,
+    dish_id: dish.id,
+    dish_name: dish.name,
+    sides_json: JSON.stringify(cleanSides),
+    proteins_json: JSON.stringify(cleanProteins),
+    time_label: timeLabel,
+    created_at: now,
+    status: "unprocessed",
+    print_count: 0,
+    qr_token: qrToken,
+    idempotency_key: payload.idempotencyKey || null
+  });
+  if (insErr) {
+    return { ok: false, error: insErr.message };
+  }
+  const createdOrder = {
+    id: orderId,
+    guest: payload.guest.trim(),
+    ticketId: ((_b = payload.ticketId) == null ? void 0 : _b.trim()) || void 0,
+    table: cleanTable,
+    seat: cleanSeat,
+    category: categoryLabel,
+    dishId: dish.id,
+    dish: dish.name,
+    sides: cleanSides,
+    proteins: cleanProteins,
+    time: timeLabel,
+    createdAt: now,
+    status: "unprocessed",
+    printCount: 0,
+    qrToken
+  };
+  return { ok: true, order: createdOrder };
+}
+
+const SEED_MENU_DATA = [
+  // Nigerian Meal Preferences (15 items)
+  ["nig_1", "nigerian", "rice", "Jollof Rice + Fried Rice", "Smoky party firewood Jollof paired with rich Nigerian vegetable fried rice.", "Lagos Royal Kitchens", "/images/menu/jollof-rice.jpg", 180, 220, 10, 0, 1, 1],
+  ["nig_2", "nigerian", "rice", "Jollof Rice + Coconut Rice", "Classic smoky Jollof served alongside creamy aromatic coconut infused rice.", "Lagos Royal Kitchens", "/images/menu/jollof-coconut.jpg", 95, 120, 10, 0, 1, 0],
+  ["nig_3", "nigerian", "rice", "Fried Rice + Coconut Rice", "Savory Nigerian liver & sweetcorn fried rice paired with fragrant coconut rice.", "Lagos Royal Kitchens", "/images/menu/coconut-rice.jpg", 70, 90, 8, 0, 0, 0],
+  ["nig_4", "nigerian", "rice", "Ofada Rice + Sauce", "Local unpolished heritage Ofada rice with rich designer green pepper Ayamase sauce.", "Iya Oyo Heritage Caterers", "/images/menu/ofada-rice.jpg", 60, 100, 8, 0, 1, 1],
+  ["nig_5", "nigerian", "swallow", "Afang Soup + Garri", "Freshly pounded Afang & waterleaf simmered with periwinkles, stockfish & yellow Garri.", "Calabar Pot Caterers", "/images/menu/afang-soup.jpg", 65, 80, 5, 0, 0, 0],
+  ["nig_6", "nigerian", "swallow", "Afang Soup + Semovita", "Traditional rich Afang soup served with smooth, hot Semovita swallow.", "Calabar Pot Caterers", "/images/menu/afang-soup.jpg", 50, 60, 5, 0, 0, 0],
+  ["nig_7", "nigerian", "swallow", "Afang Soup + Fufu", "Authentic Efik Afang soup served with soft, traditional cassava Fufu.", "Calabar Pot Caterers", "/images/menu/afang-soup.jpg", 45, 50, 5, 0, 0, 0],
+  ["nig_8", "nigerian", "swallow", "Egusi Soup + Garri", "Toasted melon seed Egusi soup cooked with ugu leaves, stockfish & golden Eba (Garri).", "Iya Oyo Heritage Caterers", "/images/menu/egusi-soup.jpg", 80, 100, 8, 0, 1, 0],
+  ["nig_9", "nigerian", "swallow", "Egusi Soup + Semovita", "Rich slow-simmered Egusi melon soup paired with fluffy Semovita.", "Iya Oyo Heritage Caterers", "/images/menu/egusi-soup.jpg", 60, 75, 5, 0, 0, 0],
+  ["nig_10", "nigerian", "swallow", "Egusi Soup + Fufu", "Hearty Nigerian Egusi soup with leafy greens and soft Fufu swallow.", "Iya Oyo Heritage Caterers", "/images/menu/egusi-soup.jpg", 40, 50, 5, 0, 0, 0],
+  ["nig_11", "nigerian", "swallow", "Native Soup (Banga) + Garri", "Delta-style palm nut Banga soup infused with Beletete spice & yellow Garri.", "Delta Spice Collective", "/images/menu/banga-soup.jpg", 55, 70, 5, 0, 0, 0],
+  ["nig_12", "nigerian", "swallow", "Native Soup (Banga) + Semo", "Aromatic Niger-Delta Banga soup paired with smooth Semovita.", "Delta Spice Collective", "/images/menu/banga-soup.jpg", 45, 60, 5, 0, 0, 0],
+  ["nig_13", "nigerian", "swallow", "Native Soup (Banga) + Fufu", "Rich palm fruit Banga soup served hot with traditional Fufu.", "Delta Spice Collective", "/images/menu/banga-soup.jpg", 8, 45, 10, 0, 0, 0],
+  ["nig_14", "nigerian", "swallow", "Gbegiri + Amala", "Velvety slow-cooked honey bean Gbegiri soup with rich buka stew & hot dark Amala.", "Iya Oyo Heritage Caterers", "/images/menu/amala-ewedu.jpg", 90, 110, 10, 0, 1, 1],
+  ["nig_15", "nigerian", "swallow", "Ewedu + Amala", "Traditional smooth jute-leaf Ewedu & pepper stew paired with fluffy Amala.", "Iya Oyo Heritage Caterers", "/images/menu/amala-ewedu.jpg", 85, 100, 10, 0, 1, 0],
+  // Continental Meal Preferences (16 items)
+  ["cont_1", "continental", "rice", "Oriental Fried Rice + Buttery Prawns", "Wok-tossed basmati rice with sesame & scallions, topped with jumbo butter-poached prawns.", "Victoria Island Bistro", "/images/menu/oriental-prawns.jpg", 85, 100, 10, 0, 1, 0],
+  ["cont_2", "continental", "rice", "Oriental Fried Rice + Garlic Butter Prawns", "Fragrant Asian-style fried rice served with roasted garlic & herb king prawns.", "Victoria Island Bistro", "/images/menu/prawns-curry.jpg", 60, 80, 8, 0, 0, 0],
+  ["cont_3", "continental", "rice", "Oriental Fried Rice + Beef Curry Sauce", "Wok-seared Oriental basmati rice paired with tender prime beef strips in velvety curry.", "Victoria Island Bistro", "/images/menu/beef-curry.jpg", 75, 90, 8, 0, 0, 0],
+  ["cont_4", "continental", "rice", "Oriental Fried Rice + Chicken Curry Sauce", "Golden wok fried rice with supreme chicken breast simmered in aromatic golden curry.", "Victoria Island Bistro", "/images/menu/chicken-curry.jpg", 90, 110, 10, 0, 0, 0],
+  ["cont_5", "continental", "rice", "Special Fried Rice + Buttery Prawns", "Chef signature special basmati fried rice with pan-seared buttery tiger prawns.", "Eko Continental Culinary", "/images/menu/fried-rice.jpg", 55, 85, 8, 0, 0, 0],
+  ["cont_6", "continental", "rice", "Special Fried Rice + Garlic Butter Prawns", "Loaded special basmati rice paired with sizzling lemon-garlic butter prawns.", "Eko Continental Culinary", "/images/menu/oriental-prawns.jpg", 50, 70, 6, 0, 0, 0],
+  ["cont_7", "continental", "rice", "Special Fried Rice + Beef Curry Sauce", "Signature special fried rice served with slow-braised tenderloin beef curry.", "Eko Continental Culinary", "/images/menu/beef-curry.jpg", 65, 80, 8, 0, 0, 0],
+  ["cont_8", "continental", "rice", "Special Fried Rice + Chicken Curry Sauce", "Special vegetable & shrimp fried rice topped with rich coconut chicken curry.", "Eko Continental Culinary", "/images/menu/chicken-curry.jpg", 80, 95, 8, 0, 0, 0],
+  ["cont_9", "continental", "rice", "Jambalaya Rice + Buttery Prawns", "Cajun-spiced Creole Jambalaya rice with roasted peppers & buttery jumbo prawns.", "Victoria Island Bistro", "/images/menu/jambalaya-rice.jpg", 65, 80, 6, 0, 1, 1],
+  ["cont_10", "continental", "rice", "Jambalaya Rice + Garlic Butter Prawns", "Richly seasoned Jambalaya rice served with succulent garlic herb prawns.", "Victoria Island Bistro", "/images/menu/jambalaya-rice.jpg", 50, 65, 6, 0, 0, 0],
+  ["cont_11", "continental", "rice", "Jambalaya Rice + Beef Curry Sauce", "Spiced Creole Jambalaya rice paired with tender beef strips in savory curry sauce.", "Victoria Island Bistro", "/images/menu/beef-curry.jpg", 45, 60, 6, 0, 0, 1],
+  ["cont_12", "continental", "rice", "Jambalaya Rice + Chicken Curry Sauce", "Signature Jambalaya rice served with succulent spiced chicken curry sauce.", "Victoria Island Bistro", "/images/menu/chicken-curry.jpg", 55, 70, 6, 0, 0, 0],
+  ["cont_13", "continental", "noodles", "Singapore Noodles + Buttery Prawns", "Fine rice vermicelli stir-fried with curry spices, julienne veggies & buttery prawns.", "Eko Continental Culinary", "/images/menu/singapore-noodles.jpg", 55, 75, 8, 0, 1, 0],
+  ["cont_14", "continental", "noodles", "Singapore Noodles + Garlic Butter Prawns", "Golden wok Singapore noodles tossed with crispy vegetables & garlic butter prawns.", "Eko Continental Culinary", "/images/menu/singapore-noodles.jpg", 45, 65, 8, 0, 0, 0],
+  ["cont_15", "continental", "noodles", "Singapore Noodles + Beef Curry Sauce", "Stir-fried Singapore vermicelli noodles paired with slow-simmered beef curry sauce.", "Eko Continental Culinary", "/images/menu/beef-curry.jpg", 50, 70, 8, 0, 0, 0],
+  ["cont_16", "continental", "noodles", "Singapore Noodles + Chicken Curry Sauce", "Wok-fried Singapore vermicelli noodles accompanied by savory chicken curry.", "Eko Continental Culinary", "/images/menu/chicken-curry.jpg", 70, 85, 8, 0, 0, 0]
+];
+function getFallbackMenuItems() {
+  return SEED_MENU_DATA.map((row) => ({
+    id: row[0],
+    cat: row[1],
+    subCat: row[2],
+    name: row[3],
+    description: row[4],
+    vendor: row[5],
+    image: row[6],
+    imageMode: "photo",
+    stock: row[7],
+    initialStock: row[8],
+    threshold: row[9],
+    manualClosed: Boolean(row[10]),
+    popular: Boolean(row[11]),
+    spicy: Boolean(row[12])
+  }));
+}
+
+const seedMenuData = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  SEED_MENU_DATA: SEED_MENU_DATA,
+  getFallbackMenuItems: getFallbackMenuItems
+}, Symbol.toStringTag, { value: 'Module' }));
+
+async function fetchEventStateFromSupabase() {
+  const sb = getSupabase();
+  if (!sb) return null;
+  try {
+    const { data: menuData, error: menuErr } = await sb.from("menu_items").select("*").order("id", { ascending: true });
+    if (menuErr) {
+      console.warn("[Supabase] Error reading menu_items:", menuErr.message);
+      return null;
+    }
+    let menuItems = (menuData || []).map((r) => {
+      var _a, _b, _c, _d;
+      return {
+        id: r.id,
+        cat: r.cat,
+        subCat: r.sub_cat || "other",
+        name: r.name,
+        description: r.description || "",
+        vendor: r.vendor || "Renaissance Caterer",
+        image: r.image,
+        imageMode: r.image_mode || "photo",
+        stock: Number((_a = r.stock) != null ? _a : 0),
+        initialStock: Number((_c = (_b = r.initial_stock) != null ? _b : r.stock) != null ? _c : 0),
+        threshold: Number((_d = r.threshold) != null ? _d : 10),
+        manualClosed: Boolean(r.manual_closed),
+        popular: Boolean(r.popular),
+        spicy: Boolean(r.spicy)
+      };
+    });
+    if (menuItems.length === 0) {
+      const fallback = getFallbackMenuItems();
+      const rowsToInsert = fallback.map((d) => ({
+        id: d.id,
+        cat: d.cat,
+        sub_cat: d.subCat,
+        name: d.name,
+        description: d.description,
+        vendor: d.vendor,
+        image: d.image,
+        image_mode: d.imageMode,
+        stock: d.stock,
+        initial_stock: d.initialStock,
+        threshold: d.threshold,
+        manual_closed: d.manualClosed ? 1 : 0,
+        popular: d.popular ? 1 : 0,
+        spicy: d.spicy ? 1 : 0,
+        updated_at: Date.now()
+      }));
+      await sb.from("menu_items").upsert(rowsToInsert);
+      menuItems = fallback;
+    }
+    const { data: ordersData } = await sb.from("orders").select("*").order("created_at", { ascending: false });
+    const orders = (ordersData || []).map((r) => ({
+      id: r.id,
+      guest: r.guest_name,
+      ticketId: r.ticket_id || void 0,
+      table: r.table_no,
+      seat: r.seat_no,
+      category: r.category,
+      dishId: r.dish_id,
+      dish: r.dish_name,
+      sides: typeof r.sides_json === "string" ? JSON.parse(r.sides_json || "[]") : r.sides_json || [],
+      proteins: typeof r.proteins_json === "string" ? JSON.parse(r.proteins_json || "[]") : r.proteins_json || [],
+      time: r.time_label || "Just now",
+      createdAt: Number(r.created_at || Date.now()),
+      status: r.status || "unprocessed",
+      printCount: Number(r.print_count || 0),
+      qrToken: r.qr_token,
+      idempotencyKey: r.idempotency_key || void 0
+    }));
+    const { data: attData } = await sb.from("attendees").select("*").order("created_at", { ascending: false });
+    const attendees = (attData || []).map((r) => ({
+      ticketId: r.ticket_id,
+      name: r.name,
+      type: r.guest_type,
+      sponsorStaffId: r.sponsor_staff_id || "",
+      table: r.table_no,
+      seat: r.seat_no,
+      checkedIn: Boolean(r.checked_in),
+      checkedInAt: r.checked_in_at || void 0
+    }));
+    const { data: settingsData } = await sb.from("event_settings").select("*");
+    const settings = {};
+    for (const s of settingsData || []) {
+      settings[s.key] = s.value;
+    }
+    const { data: usersData } = await sb.from("users").select("id, name, email, role, department, created_at").order("id", { ascending: true });
+    const attChecked = attendees.filter((a) => a.checkedIn).length;
+    const attPostReg = attendees.filter((a) => a.type === "On-Site Registered").length;
+    return {
+      capacity: {
+        totalExpected: Number(settings.total_expected || 2e3),
+        totalTables: Number(settings.total_tables || 200),
+        seatsPerTable: Number(settings.seats_per_table || 10),
+        checkedInCount: Number(settings.base_checked_in || 1414) + attChecked,
+        postRegCount: Number(settings.base_post_reg || 52) + attPostReg,
+        unclaimedSeatsReleased: settings.unclaimed_seats_released === "1",
+        checkInWindow: settings.check_in_window || "2:00 PM \u2013 2:45 PM"
+      },
+      menuItems,
+      orders,
+      attendees,
+      users: usersData || [],
+      metrics: {
+        avgResponseMs: 12,
+        totalProcessedLockOps: 1500
+      }
+    };
+  } catch (err) {
+    console.warn("[Supabase] Failed to fetch state, falling back to SQLite/seed:", err);
+    return null;
+  }
+}
+
 function mapOrderRow(r) {
   return {
     id: r.id,
@@ -4229,6 +4541,40 @@ const orders_post = defineEventHandler(async (event) => {
   const now = Date.now();
   const timeLabel = (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const devOverride = body.devOverride === true;
+  const sb = getSupabase();
+  if (sb) {
+    const onlineResult = await submitOrderToSupabase({
+      guest: String(guest).trim(),
+      ticketId: ticketId ? String(ticketId).trim() : void 0,
+      table: cleanTable,
+      seat: cleanSeat,
+      dishId,
+      sides: Array.isArray(sides) ? sides : [],
+      proteins: Array.isArray(proteins) ? proteins : [],
+      idempotencyKey,
+      devOverride
+    });
+    if (!onlineResult.ok) {
+      if (onlineResult.alreadyOrdered && onlineResult.order) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: onlineResult.error,
+          data: { code: "ALREADY_ORDERED", order: onlineResult.order }
+        });
+      }
+      throw createError({
+        statusCode: 409,
+        statusMessage: onlineResult.error
+      });
+    }
+    const onlineState = await fetchEventStateFromSupabase();
+    setTimingMetric(Date.now() - startTime);
+    return {
+      ok: true,
+      order: onlineResult.order,
+      state: onlineState || getFullEventState()
+    };
+  }
   let createdOrder = null;
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -4321,8 +4667,36 @@ const orders_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
   default: orders_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const state_get = defineEventHandler(() => {
-  return getFullEventState();
+const state_get = defineEventHandler(async () => {
+  const onlineState = await fetchEventStateFromSupabase();
+  if (onlineState) {
+    return onlineState;
+  }
+  try {
+    return getFullEventState();
+  } catch (err) {
+    console.warn("[state.get] Fallback to static seed data:", err);
+    const { getFallbackMenuItems } = await Promise.resolve().then(function () { return seedMenuData; });
+    return {
+      capacity: {
+        totalExpected: 2e3,
+        totalTables: 200,
+        seatsPerTable: 10,
+        checkedInCount: 1414,
+        postRegCount: 52,
+        unclaimedSeatsReleased: false,
+        checkInWindow: "2:00 PM \u2013 2:45 PM"
+      },
+      menuItems: getFallbackMenuItems(),
+      orders: [],
+      attendees: [],
+      users: [],
+      metrics: {
+        avgResponseMs: 10,
+        totalProcessedLockOps: 1500
+      }
+    };
+  }
 });
 
 const state_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({

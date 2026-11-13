@@ -1,4 +1,7 @@
 import { getDb, getFullEventState, setTimingMetric } from '../utils/db'
+import { getSupabase } from '../utils/supabase'
+import { submitOrderToSupabase } from '../utils/supabaseOrderService'
+import { fetchEventStateFromSupabase } from '../utils/supabaseService'
 
 function mapOrderRow(r: any) {
   return {
@@ -131,6 +134,44 @@ export default defineEventHandler(async (event) => {
   const now = Date.now()
   const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const devOverride = body.devOverride === true
+
+  // ONLINE SUPABASE PRIMARY PATH (e.g. on Netlify)
+  const sb = getSupabase()
+  if (sb) {
+    const onlineResult = await submitOrderToSupabase({
+      guest: String(guest).trim(),
+      ticketId: ticketId ? String(ticketId).trim() : undefined,
+      table: cleanTable,
+      seat: cleanSeat,
+      dishId,
+      sides: Array.isArray(sides) ? sides : [],
+      proteins: Array.isArray(proteins) ? proteins : [],
+      idempotencyKey,
+      devOverride
+    })
+
+    if (!onlineResult.ok) {
+      if (onlineResult.alreadyOrdered && onlineResult.order) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: onlineResult.error,
+          data: { code: 'ALREADY_ORDERED', order: onlineResult.order }
+        })
+      }
+      throw createError({
+        statusCode: 409,
+        statusMessage: onlineResult.error
+      })
+    }
+
+    const onlineState = await fetchEventStateFromSupabase()
+    setTimingMetric(Date.now() - startTime)
+    return {
+      ok: true,
+      order: onlineResult.order,
+      state: onlineState || getFullEventState()
+    }
+  }
 
   let createdOrder: any = null
 
