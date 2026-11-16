@@ -59,10 +59,20 @@ let t1: ReturnType<typeof setTimeout> | null = null
 const dismiss = () => {
   visible.value = false
   splashPlayed.value = true
+  if (import.meta.client) {
+    try {
+      sessionStorage.setItem('ren-splash-shown', 'true')
+    } catch {}
+  }
 }
 
 onMounted(() => {
+  // If already played during this in-memory session or stored in sessionStorage, skip immediately
   if (splashPlayed.value) return
+  if (import.meta.client && sessionStorage.getItem('ren-splash-shown') === 'true') {
+    splashPlayed.value = true
+    return
+  }
   visible.value = true
   requestAnimationFrame(() => {
     step.value = 1
