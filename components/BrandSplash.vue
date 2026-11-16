@@ -1,9 +1,6 @@
 <template>
   <Transition
-    enter-active-class="transition-opacity duration-300"
-    enter-from-class="opacity-0"
-    enter-to-class="opacity-100"
-    leave-active-class="transition-opacity duration-500 ease-out pointer-events-none"
+    leave-active-class="transition-opacity duration-700 ease-out pointer-events-none"
     leave-from-class="opacity-100"
     leave-to-class="opacity-0"
   >
@@ -23,10 +20,7 @@
         ></div>
 
         <!-- Clean Official Renaissance Logo (Light / Dark) -->
-        <div
-          class="relative z-10 transition-all duration-700"
-          :class="step >= 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
-        >
+        <div class="relative z-10">
           <img
             :src="isDark ? '/images/brand/renaissance-logo-dark.jpg' : '/images/brand/renaissance-logo-light.jpg'"
             alt="Renaissance"
@@ -51,8 +45,9 @@
 const { isDark } = useEventSuite()
 
 const splashPlayed = useState<boolean>('ren-splash-played', () => false)
-const visible = ref(false)
-const step = ref(0)
+// Start visible IMMEDIATELY on first load so there is zero flash of the main content
+const visible = ref(true)
+const step = ref(1)
 
 let t1: ReturnType<typeof setTimeout> | null = null
 
@@ -67,16 +62,12 @@ const dismiss = () => {
 }
 
 onMounted(() => {
-  // If already played during this in-memory session or stored in sessionStorage, skip immediately
-  if (splashPlayed.value) return
-  if (import.meta.client && sessionStorage.getItem('ren-splash-shown') === 'true') {
+  // If already played during this in-memory session or stored in sessionStorage, dismiss immediately
+  if (splashPlayed.value || (import.meta.client && sessionStorage.getItem('ren-splash-shown') === 'true')) {
+    visible.value = false
     splashPlayed.value = true
     return
   }
-  visible.value = true
-  requestAnimationFrame(() => {
-    step.value = 1
-  })
   t1 = setTimeout(() => {
     dismiss()
   }, 2800)
