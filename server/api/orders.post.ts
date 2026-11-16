@@ -135,9 +135,11 @@ export default defineEventHandler(async (event) => {
   const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const devOverride = body.devOverride === true
 
-  // ONLINE SUPABASE PRIMARY PATH (e.g. on Netlify)
+  const isNetlifyOrProd = process.env.NETLIFY === 'true' || process.env.NODE_ENV === 'production'
   const sb = getSupabase()
-  if (sb) {
+
+  // On Netlify/production with Supabase configured, use Supabase online ordering
+  if (isNetlifyOrProd && sb) {
     const onlineResult = await submitOrderToSupabase({
       guest: String(guest).trim(),
       ticketId: ticketId ? String(ticketId).trim() : undefined,

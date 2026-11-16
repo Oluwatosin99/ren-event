@@ -1,6 +1,7 @@
 declare global {
   const H3Error: typeof import('../../node_modules/h3/dist/index').H3Error
   const H3Event: typeof import('../../node_modules/h3/dist/index').H3Event
+  const SEED_MENU_DATA: typeof import('../../server/utils/seedMenuData').SEED_MENU_DATA
   const __buildAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').buildAssetsURL
   const __publicAssetsURL: typeof import('../../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths').publicAssetsURL
   const appendCorsHeaders: typeof import('../../node_modules/h3/dist/index').appendCorsHeaders
@@ -41,12 +42,14 @@ declare global {
   const deleteCookie: typeof import('../../node_modules/h3/dist/index').deleteCookie
   const dynamicEventHandler: typeof import('../../node_modules/h3/dist/index').dynamicEventHandler
   const eventHandler: typeof import('../../node_modules/h3/dist/index').eventHandler
+  const fetchEventStateFromSupabase: typeof import('../../server/utils/supabaseService').fetchEventStateFromSupabase
   const fetchWithEvent: typeof import('../../node_modules/h3/dist/index').fetchWithEvent
   const fromNodeMiddleware: typeof import('../../node_modules/h3/dist/index').fromNodeMiddleware
   const fromPlainHandler: typeof import('../../node_modules/h3/dist/index').fromPlainHandler
   const fromWebHandler: typeof import('../../node_modules/h3/dist/index').fromWebHandler
   const getCookie: typeof import('../../node_modules/h3/dist/index').getCookie
   const getDb: typeof import('../../server/utils/db').getDb
+  const getFallbackMenuItems: typeof import('../../server/utils/seedMenuData').getFallbackMenuItems
   const getFullEventState: typeof import('../../server/utils/db').getFullEventState
   const getHeader: typeof import('../../node_modules/h3/dist/index').getHeader
   const getHeaders: typeof import('../../node_modules/h3/dist/index').getHeaders
@@ -116,6 +119,7 @@ declare global {
   const setResponseStatus: typeof import('../../node_modules/h3/dist/index').setResponseStatus
   const setTimingMetric: typeof import('../../server/utils/db').setTimingMetric
   const splitCookiesString: typeof import('../../node_modules/h3/dist/index').splitCookiesString
+  const submitOrderToSupabase: typeof import('../../server/utils/supabaseOrderService').submitOrderToSupabase
   const toEventHandler: typeof import('../../node_modules/h3/dist/index').toEventHandler
   const toNodeListener: typeof import('../../node_modules/h3/dist/index').toNodeListener
   const toPlainHandler: typeof import('../../node_modules/h3/dist/index').toPlainHandler
@@ -140,6 +144,9 @@ declare global {
   // @ts-ignore
   export type { UserRole, DbUser, MenuSubCat, ImageDisplayMode, MenuItem, FoodOrder, GuestAttendee, EventState } from '../../server/utils/db'
   import('../../server/utils/db')
+  // @ts-ignore
+  export type { SeedMenuRow } from '../../server/utils/seedMenuData'
+  import('../../server/utils/seedMenuData')
 }
 export { H3Event, H3Error, appendCorsHeaders, appendCorsPreflightHeaders, appendHeader, appendHeaders, appendResponseHeader, appendResponseHeaders, assertMethod, callNodeListener, clearResponseHeaders, clearSession, createApp, createAppEventHandler, createError, createEvent, createEventStream, createRouter, defaultContentType, defineEventHandler, defineLazyEventHandler, defineNodeListener, defineNodeMiddleware, defineRequestMiddleware, defineResponseMiddleware, defineWebSocket, defineWebSocketHandler, deleteCookie, dynamicEventHandler, eventHandler, fetchWithEvent, fromNodeMiddleware, fromPlainHandler, fromWebHandler, getCookie, getHeader, getHeaders, getMethod, getProxyRequestHeaders, getQuery, getRequestFingerprint, getRequestHeader, getRequestHeaders, getRequestHost, getRequestIP, getRequestPath, getRequestProtocol, getRequestURL, getRequestWebStream, getResponseHeader, getResponseHeaders, getResponseStatus, getResponseStatusText, getRouterParam, getRouterParams, getSession, getValidatedQuery, getValidatedRouterParams, handleCacheHeaders, handleCors, isCorsOriginAllowed, isError, isEvent, isEventHandler, isMethod, isPreflightRequest, isStream, isWebResponse, lazyEventHandler, parseCookies, promisifyNodeListener, proxyRequest, readBody, readFormData, readMultipartFormData, readRawBody, readValidatedBody, removeResponseHeader, sanitizeStatusCode, sanitizeStatusMessage, sealSession, send, sendError, sendIterable, sendNoContent, sendProxy, sendRedirect, sendStream, sendWebResponse, serveStatic, setCookie, setHeader, setHeaders, setResponseHeader, setResponseHeaders, setResponseStatus, splitCookiesString, toEventHandler, toNodeListener, toPlainHandler, toWebHandler, toWebRequest, unsealSession, updateSession, useBase, useSession, writeEarlyHints } from 'h3';
 export { useNitroApp } from 'nitropack/runtime/internal/app';
@@ -156,4 +163,7 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from 'C:/Users/Oluwatosin.Dawodu/REN Event/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths';
 export { defineAppConfig } from 'C:/Users/Oluwatosin.Dawodu/REN Event/node_modules/@nuxt/nitro-server/dist/runtime/utils/config';
 export { inferSubCat, getDb, setTimingMetric, getFullEventState } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/db';
+export { SEED_MENU_DATA, getFallbackMenuItems } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/seedMenuData';
 export { getSupabase } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/supabase';
+export { submitOrderToSupabase } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/supabaseOrderService';
+export { fetchEventStateFromSupabase } from 'C:/Users/Oluwatosin.Dawodu/REN Event/server/utils/supabaseService';

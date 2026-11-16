@@ -2329,22 +2329,7 @@ const plugins = [
 _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 ];
 
-const assets = {
-  "/index.mjs": {
-    "type": "text/javascript; charset=utf-8",
-    "etag": "\"2d689-RIfJiL7kITHHcEPN69f7CvDIFfE\"",
-    "mtime": "2026-11-13T11:55:19.386Z",
-    "size": 185993,
-    "path": "index.mjs"
-  },
-  "/index.mjs.map": {
-    "type": "application/json",
-    "etag": "\"b6365-2tvJ+4tJ0ff91VczdUR538HnZA4\"",
-    "mtime": "2026-11-13T11:55:19.387Z",
-    "size": 746341,
-    "path": "index.mjs.map"
-  }
-};
+const assets = {};
 
 function readAsset (id) {
   const serverDir = dirname$1(fileURLToPath(globalThis._importMeta_.url));
@@ -4541,8 +4526,9 @@ const orders_post = defineEventHandler(async (event) => {
   const now = Date.now();
   const timeLabel = (/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const devOverride = body.devOverride === true;
+  const isNetlifyOrProd = process.env.NETLIFY === "true" || false;
   const sb = getSupabase();
-  if (sb) {
+  if (isNetlifyOrProd && sb) {
     const onlineResult = await submitOrderToSupabase({
       guest: String(guest).trim(),
       ticketId: ticketId ? String(ticketId).trim() : void 0,
@@ -4668,35 +4654,49 @@ const orders_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePrope
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const state_get = defineEventHandler(async () => {
-  const onlineState = await fetchEventStateFromSupabase();
-  if (onlineState) {
-    return onlineState;
+  const isNetlifyOrProd = process.env.NETLIFY === "true" || false;
+  if (isNetlifyOrProd) {
+    try {
+      const onlineState = await fetchEventStateFromSupabase();
+      if (onlineState && onlineState.menuItems && onlineState.menuItems.length > 0) {
+        return onlineState;
+      }
+    } catch (e) {
+      console.warn("[state.get] Supabase fetch error in production:", e);
+    }
   }
   try {
-    return getFullEventState();
+    const localState = getFullEventState();
+    if (localState && localState.menuItems && localState.menuItems.length > 0) {
+      return localState;
+    }
   } catch (err) {
-    console.warn("[state.get] Fallback to static seed data:", err);
-    const { getFallbackMenuItems } = await Promise.resolve().then(function () { return seedMenuData; });
-    return {
-      capacity: {
-        totalExpected: 2e3,
-        totalTables: 200,
-        seatsPerTable: 10,
-        checkedInCount: 1414,
-        postRegCount: 52,
-        unclaimedSeatsReleased: false,
-        checkInWindow: "2:00 PM \u2013 2:45 PM"
-      },
-      menuItems: getFallbackMenuItems(),
-      orders: [],
-      attendees: [],
-      users: [],
-      metrics: {
-        avgResponseMs: 10,
-        totalProcessedLockOps: 1500
-      }
-    };
+    console.warn("[state.get] Local SQLite read error, falling back:", err);
   }
+  const online = await fetchEventStateFromSupabase();
+  if (online && online.menuItems && online.menuItems.length > 0) {
+    return online;
+  }
+  const { getFallbackMenuItems } = await Promise.resolve().then(function () { return seedMenuData; });
+  return {
+    capacity: {
+      totalExpected: 2e3,
+      totalTables: 200,
+      seatsPerTable: 10,
+      checkedInCount: 1414,
+      postRegCount: 52,
+      unclaimedSeatsReleased: false,
+      checkInWindow: "2:00 PM \u2013 2:45 PM"
+    },
+    menuItems: getFallbackMenuItems(),
+    orders: [],
+    attendees: [],
+    users: [],
+    metrics: {
+      avgResponseMs: 10,
+      totalProcessedLockOps: 1500
+    }
+  };
 });
 
 const state_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
