@@ -4,11 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
-    supabaseUrl: process.env.SUPABASE_URL || 'https://ggohezsainzfzhqserls.supabase.co',
-    supabaseKey: process.env.SUPABASE_KEY || 'sb_publishable_PHF3Et730xu8l5ZYIE9b6w_K8UCiRKJ',
+    supabaseUrl: process.env.SUPABASE_URL || '',
+    supabaseKey: process.env.SUPABASE_KEY || '',
     public: {
-      supabaseUrl: process.env.SUPABASE_URL || 'https://ggohezsainzfzhqserls.supabase.co',
-      supabaseKey: process.env.SUPABASE_KEY || 'sb_publishable_PHF3Et730xu8l5ZYIE9b6w_K8UCiRKJ',
       // DEV MODE: shows "Override & Order Again" on the Thank You screen.
       // Set NUXT_PUBLIC_ALLOW_ORDER_OVERRIDE=false (or change to false) before go-live.
       allowOrderOverride: true

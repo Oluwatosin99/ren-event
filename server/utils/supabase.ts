@@ -6,8 +6,8 @@ export function getSupabase(): SupabaseClient | null {
   if (supabaseClient) return supabaseClient
 
   const config = useRuntimeConfig()
-  const url = (config.supabaseUrl || config.public?.supabaseUrl || process.env.SUPABASE_URL || '').trim()
-  const key = (config.supabaseKey || config.public?.supabaseKey || process.env.SUPABASE_KEY || '').trim()
+  const url = (config.supabaseUrl || process.env.SUPABASE_URL || '').trim()
+  const key = (config.supabaseKey || process.env.SUPABASE_KEY || '').trim()
 
   if (!url || !key) {
     return null
