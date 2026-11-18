@@ -471,7 +471,8 @@
           </button>
         </div>
 
-        <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+        <!-- Desktop & Laptop Table View -->
+        <div class="hidden md:block overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
           <table class="w-full text-left border-collapse text-xs">
             <thead class="bg-slate-50 dark:bg-slate-950 text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -502,6 +503,46 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Mobile Clean List View (No Horizontal Overflow) -->
+        <div class="md:hidden divide-y divide-slate-200 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+          <div
+            v-for="u in personnelUsers"
+            :key="u.id"
+            class="p-3.5 flex items-center justify-between gap-3 bg-white dark:bg-slate-900"
+          >
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-mono text-slate-400">#{{ u.id }}</span>
+                <span class="font-bold text-xs text-slate-900 dark:text-white truncate">{{ u.name }}</span>
+              </div>
+              <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {{ u.email }}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <span
+                class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
+                :class="u.role === 'admin'
+                  ? 'bg-red-500/15 text-red-700 dark:text-red-400'
+                  : u.role === 'registrar'
+                    ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'"
+              >
+                {{ u.role }}
+              </span>
+              <button
+                type="button"
+                @click="selectedUserModal = u"
+                class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/15 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition"
+                aria-label="View User Details"
+              >
+                <VIcon name="eye" size="sm" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -563,6 +604,71 @@
         </form>
       </div>
     </div>
+
+    <!-- Mobile Personnel User Details Modal -->
+    <Transition
+      enter-active-class="transition duration-150 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-100 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="selectedUserModal"
+        class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="selectedUserModal = null"
+      >
+        <div class="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <div class="text-[11px] font-mono text-slate-400">Personnel ID #{{ selectedUserModal.id }}</div>
+              <h3 class="text-base font-black text-slate-900 dark:text-white">{{ selectedUserModal.name }}</h3>
+            </div>
+            <button
+              type="button"
+              @click="selectedUserModal = null"
+              class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center"
+            >
+              <VIcon name="x" size="xs" />
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <div class="text-[10px] font-bold uppercase text-slate-400">Email Address</div>
+              <div class="font-mono font-bold text-slate-900 dark:text-white mt-0.5 break-all">{{ selectedUserModal.email }}</div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <div class="text-[10px] font-bold uppercase text-slate-400">Department</div>
+              <div class="font-semibold text-slate-900 dark:text-white mt-0.5">{{ selectedUserModal.department }}</div>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Assigned Role</label>
+              <select
+                :value="selectedUserModal.role"
+                @change="handleUpdateUserRole(selectedUserModal.id, ($event.target as HTMLSelectElement).value as UserRole); selectedUserModal = null"
+                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+              >
+                <option value="admin">Admin</option>
+                <option value="registrar">Register / Gate Scanner</option>
+                <option value="delivery">Delivery Checker</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            @click="selectedUserModal = null"
+            class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition"
+          >
+            Close Details
+          </button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -578,6 +684,7 @@ const {
   simulateConcurrencyBurst
 } = useEventSuite()
 const router = useRouter()
+const selectedUserModal = ref<any>(null)
 
 // Guard: Only admins (and legacy vendor sessions) allowed
 onMounted(() => {
