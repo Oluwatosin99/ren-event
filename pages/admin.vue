@@ -1,72 +1,79 @@
 <template>
   <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-    <!-- Top Executive Header (Matching Screenshot Theme) -->
-    <div class="rounded-3xl bg-emerald-600 text-white p-5 sm:p-6 shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2 text-emerald-100 text-xs font-bold uppercase tracking-wider">
+    <!-- Top Executive Header (Glassmorphism + Renaissance Gradient) -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 via-emerald-600 to-orange-500/90 text-white p-5 sm:p-6 shadow-xl border border-white/20 backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <!-- Subtle Glass Highlight Orbs -->
+      <div class="absolute -top-12 -left-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none"></div>
+      <div class="absolute -bottom-16 right-12 w-56 h-56 rounded-full bg-yellow-300/15 blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10">
+        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-emerald-50 text-[11px] font-bold uppercase tracking-wider">
           <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
           <span>Live Operations Feed</span>
         </div>
-        <h1 class="text-xl sm:text-3xl font-black tracking-tight mt-1">
+        <h1 class="text-xl sm:text-3xl font-black tracking-tight mt-2 drop-shadow-sm">
           End of Year Party Meal Order Dashboard
         </h1>
-        <div class="text-xs text-emerald-100 font-mono mt-1">
-          {{ currentTimeFormatted }} • Real-Time Tracking
+        <div class="text-xs text-white/90 font-mono mt-1.5 flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md border border-white/20 font-bold">
+            {{ currentTimeFormatted }}
+          </span>
+          <span>• Real-Time Tracking</span>
         </div>
       </div>
 
-      <!-- Top Executive Filters: Quad, Table Number, Seat Number -->
-      <div class="flex flex-wrap items-center gap-2.5 bg-emerald-700/80 p-2 rounded-2xl border border-emerald-500/40">
+      <!-- Top Executive Filters: Quad, Table Number, Seat Number (Frosted Glass) -->
+      <div class="relative z-10 flex flex-wrap items-center gap-2.5 bg-white/15 backdrop-blur-md p-2.5 rounded-2xl border border-white/25 shadow-inner">
         <!-- Quad Filter -->
         <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-emerald-200 px-1">Quad</label>
+          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Quad</label>
           <select
             v-model="filterQuad"
-            class="px-3 py-1.5 rounded-xl bg-emerald-800 text-white text-xs font-bold border border-emerald-500/50 focus:outline-none cursor-pointer"
+            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">All Quads</option>
-            <option value="A">Quad A (Tables 1–50)</option>
-            <option value="B">Quad B (Tables 51–100)</option>
-            <option value="C">Quad C (Tables 101–150)</option>
-            <option value="D">Quad D (Tables 151–200)</option>
+            <option value="ALL" class="bg-slate-900 text-white">All Quads</option>
+            <option value="A" class="bg-slate-900 text-white">Quad A (Tables 1–50)</option>
+            <option value="B" class="bg-slate-900 text-white">Quad B (Tables 51–100)</option>
+            <option value="C" class="bg-slate-900 text-white">Quad C (Tables 101–150)</option>
+            <option value="D" class="bg-slate-900 text-white">Quad D (Tables 151–200)</option>
           </select>
         </div>
 
         <!-- Table Number Filter -->
         <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-emerald-200 px-1">Table Number</label>
+          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Table Number</label>
           <select
             v-model="filterTable"
-            class="px-3 py-1.5 rounded-xl bg-emerald-800 text-white text-xs font-bold border border-emerald-500/50 focus:outline-none cursor-pointer"
+            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">All Tables</option>
-            <option v-for="t in availableTables" :key="t" :value="t">Table {{ t }}</option>
+            <option value="ALL" class="bg-slate-900 text-white">All Tables</option>
+            <option v-for="t in availableTables" :key="t" :value="t" class="bg-slate-900 text-white">Table {{ t }}</option>
           </select>
         </div>
 
         <!-- Seat Number Filter -->
         <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-emerald-200 px-1">Seat Number</label>
+          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Seat Number</label>
           <select
             v-model="filterSeat"
-            class="px-3 py-1.5 rounded-xl bg-emerald-800 text-white text-xs font-bold border border-emerald-500/50 focus:outline-none cursor-pointer"
+            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">All Seats</option>
-            <option v-for="s in 10" :key="s" :value="`Seat ${s}`">Seat {{ s }}</option>
+            <option value="ALL" class="bg-slate-900 text-white">All Seats</option>
+            <option v-for="s in 10" :key="s" :value="`Seat ${s}`" class="bg-slate-900 text-white">Seat {{ s }}</option>
           </select>
         </div>
 
         <!-- Status Filter (Processed / Unprocessed / Delivered) -->
         <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-emerald-200 px-1">Status</label>
+          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Status</label>
           <select
             v-model="filterStatus"
-            class="px-3 py-1.5 rounded-xl bg-emerald-800 text-white text-xs font-bold border border-emerald-500/50 focus:outline-none cursor-pointer"
+            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">All Status</option>
-            <option value="unprocessed">Unprocessed Only</option>
-            <option value="processed">Processed (Printed)</option>
-            <option value="delivered">Served (Delivered)</option>
+            <option value="ALL" class="bg-slate-900 text-white">All Status</option>
+            <option value="unprocessed" class="bg-slate-900 text-white">Unprocessed Only</option>
+            <option value="processed" class="bg-slate-900 text-white">Processed (Printed)</option>
+            <option value="delivered" class="bg-slate-900 text-white">Served (Delivered)</option>
           </select>
         </div>
       </div>
@@ -784,11 +791,21 @@ const handleDeleteUser = async (userId: number, name: string) => {
   }
 }
 
+const nowTick = ref(Date.now())
+let clockTimer: ReturnType<typeof setInterval> | null = null
+
 // Guard: Only admins (and legacy vendor sessions) allowed
 onMounted(() => {
   if (userSession.value.role !== 'admin' && userSession.value.role !== 'vendor') {
     router.replace('/Personnel')
   }
+  clockTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (clockTimer) clearInterval(clockTimer)
 })
 
 const adminTab = ref<'matrix' | 'registration' | 'users'>('matrix')
@@ -850,7 +867,7 @@ const filterSeat = ref<string>('ALL')
 const filterStatus = ref<string>('ALL')
 
 const currentTimeFormatted = computed(() => {
-  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return new Date(nowTick.value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 })
 
 const allOrders = computed(() => eventState.value?.orders || [])
