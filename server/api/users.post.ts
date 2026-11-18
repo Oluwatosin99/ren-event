@@ -34,6 +34,42 @@ export default defineEventHandler(async (event) => {
     return { ok: true, state: getFullEventState() }
   }
 
+  if (body.action === 'update_user') {
+    const id = Number(body.userId)
+    const name = String(body.name || '').trim()
+    const email = String(body.email || '').trim().toLowerCase()
+    const department = String(body.department || 'Event Operations').trim()
+    const role = ['admin', 'vendor', 'delivery', 'registrar', 'guest'].includes(body.role) ? body.role : 'guest'
+    const password = String(body.password || '').trim()
+
+    if (!id || !name || !email) {
+      throw createError({ statusCode: 400, statusMessage: 'User ID, name, and email are required.' })
+    }
+
+    try {
+      if (password) {
+        db.prepare('UPDATE users SET name = ?, email = ?, department = ?, role = ?, password = ? WHERE id = ?')
+          .run(name, email, department, role, password, id)
+      } else {
+        db.prepare('UPDATE users SET name = ?, email = ?, department = ?, role = ? WHERE id = ?')
+          .run(name, email, department, role, id)
+      }
+    } catch {
+      throw createError({ statusCode: 409, statusMessage: 'Another user with this email already exists.' })
+    }
+
+    return { ok: true, state: getFullEventState() }
+  }
+
+  if (body.action === 'delete_user') {
+    const id = Number(body.userId)
+    if (!id) {
+      throw createError({ statusCode: 400, statusMessage: 'User ID is required.' })
+    }
+    db.prepare('DELETE FROM users WHERE id = ?').run(id)
+    return { ok: true, state: getFullEventState() }
+  }
+
   throw createError({ statusCode: 400, statusMessage: 'Invalid user management action' })
 })
 

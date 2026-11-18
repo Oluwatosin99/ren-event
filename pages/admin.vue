@@ -481,6 +481,7 @@
                 <th class="py-3 px-4">Email</th>
                 <th class="py-3 px-4">Department</th>
                 <th class="py-3 px-4">Role</th>
+                <th class="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -499,6 +500,24 @@
                     <option value="registrar">Register / Gate Scanner</option>
                     <option value="delivery">Delivery Checker</option>
                   </select>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <div class="inline-flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      @click="openUserEditModal(u)"
+                      class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/15 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 font-bold text-[11px] transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      @click="handleDeleteUser(u.id, u.name)"
+                      class="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-600 text-red-600 dark:text-red-400 hover:text-white font-bold text-[11px] transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -535,9 +554,9 @@
               </span>
               <button
                 type="button"
-                @click="selectedUserModal = u"
+                @click="openUserEditModal(u)"
                 class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/15 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition"
-                aria-label="View User Details"
+                aria-label="View & Edit User Details"
               >
                 <VIcon name="eye" size="sm" />
               </button>
@@ -605,7 +624,7 @@
       </div>
     </div>
 
-    <!-- Mobile Personnel User Details Modal -->
+    <!-- Personnel User Details & Edit Modal -->
     <Transition
       enter-active-class="transition duration-150 ease-out"
       enter-from-class="opacity-0"
@@ -619,11 +638,14 @@
         class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
         @click.self="selectedUserModal = null"
       >
-        <div class="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+        <form
+          @submit.prevent="handleSaveUserEdit"
+          class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4"
+        >
           <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div>
               <div class="text-[11px] font-mono text-slate-400">Personnel ID #{{ selectedUserModal.id }}</div>
-              <h3 class="text-base font-black text-slate-900 dark:text-white">{{ selectedUserModal.name }}</h3>
+              <h3 class="text-base font-black text-slate-900 dark:text-white">Edit Personnel Account</h3>
             </div>
             <button
               type="button"
@@ -635,38 +657,76 @@
           </div>
 
           <div class="space-y-3 text-xs">
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <div class="text-[10px] font-bold uppercase text-slate-400">Email Address</div>
-              <div class="font-mono font-bold text-slate-900 dark:text-white mt-0.5 break-all">{{ selectedUserModal.email }}</div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Full Name *</label>
+              <input
+                v-model="editUserForm.name"
+                type="text"
+                required
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+              />
             </div>
 
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <div class="text-[10px] font-bold uppercase text-slate-400">Department</div>
-              <div class="font-semibold text-slate-900 dark:text-white mt-0.5">{{ selectedUserModal.department }}</div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Email Address *</label>
+              <input
+                v-model="editUserForm.email"
+                type="email"
+                required
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+              />
             </div>
 
-            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5">Assigned Role</label>
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Department</label>
+              <input
+                v-model="editUserForm.department"
+                type="text"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Assigned Role *</label>
               <select
-                :value="selectedUserModal.role"
-                @change="handleUpdateUserRole(selectedUserModal.id, ($event.target as HTMLSelectElement).value as UserRole); selectedUserModal = null"
-                class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+                v-model="editUserForm.role"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="admin">Admin</option>
                 <option value="registrar">Register / Gate Scanner</option>
                 <option value="delivery">Delivery Checker</option>
               </select>
             </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">New Password (optional)</label>
+              <input
+                v-model="editUserForm.password"
+                type="text"
+                placeholder="Leave blank to keep current password"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+              />
+            </div>
           </div>
 
-          <button
-            type="button"
-            @click="selectedUserModal = null"
-            class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition"
-          >
-            Close Details
-          </button>
-        </div>
+          <div class="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              @click="handleDeleteUser(selectedUserModal.id, selectedUserModal.name)"
+              :disabled="isLoading"
+              class="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-600 text-red-600 dark:text-red-400 hover:text-white font-black text-xs transition"
+            >
+              Delete User
+            </button>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition"
+            >
+              {{ isLoading ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
       </div>
     </Transition>
   </div>
@@ -685,6 +745,44 @@ const {
 } = useEventSuite()
 const router = useRouter()
 const selectedUserModal = ref<any>(null)
+const editUserForm = reactive({
+  name: '',
+  email: '',
+  department: '',
+  role: 'registrar' as UserRole,
+  password: ''
+})
+
+const openUserEditModal = (u: any) => {
+  selectedUserModal.value = u
+  editUserForm.name = u.name
+  editUserForm.email = u.email
+  editUserForm.department = u.department || 'Event Operations'
+  editUserForm.role = u.role
+  editUserForm.password = ''
+}
+
+const handleSaveUserEdit = async () => {
+  if (!selectedUserModal.value) return
+  await manageUsers({
+    action: 'update_user',
+    userId: selectedUserModal.value.id,
+    name: editUserForm.name,
+    email: editUserForm.email,
+    department: editUserForm.department,
+    role: editUserForm.role,
+    password: editUserForm.password
+  })
+  selectedUserModal.value = null
+}
+
+const handleDeleteUser = async (userId: number, name: string) => {
+  if (import.meta.client && !confirm(`Delete personnel user "${name}"?`)) return
+  await manageUsers({ action: 'delete_user', userId })
+  if (selectedUserModal.value?.id === userId) {
+    selectedUserModal.value = null
+  }
+}
 
 // Guard: Only admins (and legacy vendor sessions) allowed
 onMounted(() => {
