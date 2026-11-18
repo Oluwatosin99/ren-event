@@ -240,30 +240,31 @@
           </div>
         </div>
 
-        <!-- The Matrix Table (Rows = Tables, Columns = Seat 1 to 10) -->
-        <div class="overflow-x-auto">
+        <!-- The Matrix Table (Rows = Tables, Columns = Seat 1 to N) -->
+        <div class="overflow-x-auto max-h-[460px] overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
           <table class="w-full text-center border-collapse">
-            <thead>
+            <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900 shadow-sm">
               <tr class="text-[11px] font-extrabold uppercase text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                <th class="py-2 px-2 text-left w-24">Table Number</th>
-                <th v-for="seatNum in 10" :key="seatNum" class="py-2 px-1 text-center w-10">
+                <th class="py-2 px-2 text-left w-24">Table</th>
+                <th v-for="seatNum in maxSeatsPerTable" :key="seatNum" class="py-2 px-1 text-center min-w-[28px] sm:w-10">
                   {{ seatNum }}
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
               <tr v-for="t in matrixTables" :key="t" class="hover:bg-slate-50/50 dark:hover:bg-slate-950/40">
-                <td class="py-2.5 px-2 text-left font-black text-slate-900 dark:text-white font-mono">
-                  Table {{ t }}
+                <td class="py-2 px-2 text-left font-black text-slate-900 dark:text-white font-mono whitespace-nowrap">
+                  T{{ t }} <span class="hidden sm:inline font-sans font-bold text-slate-500 dark:text-slate-400">(Table {{ t }})</span>
                 </td>
-                <td v-for="s in 10" :key="s" class="p-1">
-                  <!-- Seat Cell -->
+                <td v-for="s in maxSeatsPerTable" :key="s" class="p-0.5 sm:p-1">
+                  <!-- Seat Cell: Mobile uses S/O/P, Desktop uses Served/Ordered/Printed -->
                   <div
-                    class="h-8 rounded-lg flex items-center justify-center font-bold text-[10px] transition-all select-none"
+                    class="h-7 sm:h-8 rounded-lg flex items-center justify-center font-black text-[10px] transition-all select-none"
                     :class="getSeatCellClass(t, s)"
                     :title="getSeatTooltip(t, s)"
                   >
-                    <span>{{ getSeatCellLabel(t, s) }}</span>
+                    <span class="sm:hidden">{{ getSeatCellShortLabel(t, s) }}</span>
+                    <span class="hidden sm:inline">{{ getSeatCellLabel(t, s) }}</span>
                   </div>
                 </td>
               </tr>
@@ -631,6 +632,146 @@
       </div>
     </div>
 
+    <!-- =================================================================== -->
+    <!-- TAB 4: TABLES & SEATS LAYOUT EDITOR (EXCEL / CSV OR MANUAL)         -->
+    <!-- =================================================================== -->
+    <div v-if="adminTab === 'tables'" class="space-y-6">
+      <!-- Safety Check Banner -->
+      <div
+        class="rounded-3xl p-5 sm:p-6 border-2 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        :class="allOrders.length > 0
+          ? 'bg-red-500/10 border-red-500/40'
+          : 'bg-emerald-500/10 border-emerald-500/40'"
+      >
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 font-black text-sm" :class="allOrders.length > 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'">
+            <VIcon :name="allOrders.length > 0 ? 'alert' : 'checkCircle'" size="sm" />
+            <span>
+              {{ allOrders.length > 0
+                ? `Safety Check Locked: ${allOrders.length} Active Order(s) on Tables`
+                : 'Safety Check Clear: 0 Active Orders — Safe to Edit Tables & Seats' }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            {{ allOrders.length > 0
+              ? 'Existing tables are protected while orders exist. Clear all orders first before applying a new table layout.'
+              : `Current Layout: ${eventState?.capacity.totalTables || 200} Tables × ${eventState?.capacity.seatsPerTable || 10} Seats/Table (${(eventState?.capacity.totalExpected || 2000).toLocaleString()} total seats).` }}
+          </p>
+        </div>
+
+        <button
+          v-if="allOrders.length > 0"
+          type="button"
+          @click="handleClearAllOrders"
+          :disabled="isLoading"
+          class="px-5 py-2.5 rounded-2xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black text-xs shadow-md transition shrink-0"
+        >
+          Clear All Orders
+        </button>
+      </div>
+
+      <div v-if="tableLayoutFeedback" class="p-3.5 rounded-2xl text-xs font-bold border" :class="tableLayoutFeedback.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400'">
+        {{ tableLayoutFeedback.message }}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Option 1: Upload Excel / CSV File -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div>
+            <h2 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <VIcon name="upload" size="sm" class="text-orange-500" />
+              <span>Upload Excel / CSV Table Sheet</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Upload an <code class="font-mono">.xlsx</code>, <code class="font-mono">.xls</code>, or <code class="font-mono">.csv</code> file with columns like <strong>Table</strong> and <strong>Seats</strong> (or TableNumber / SeatNumber). Preview first, then apply.
+            </p>
+          </div>
+
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            @change="handleExcelTableUpload"
+            class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-orange-500/15 file:text-orange-700 dark:file:text-orange-300 file:font-bold cursor-pointer"
+          />
+
+          <div v-if="parsedExcelTables.length > 0" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-emerald-700 dark:text-emerald-400">Preview Ready: {{ parsedExcelTables.length }} Tables</span>
+              <span class="font-mono text-slate-500">{{ parsedExcelTotalSeats }} Total Seats</span>
+            </div>
+            <div class="max-h-36 overflow-y-auto text-[11px] font-mono text-slate-600 dark:text-slate-300 space-y-1">
+              <div v-for="row in parsedExcelTables.slice(0, 12)" :key="row.tableNo" class="flex justify-between">
+                <span>Table {{ row.tableNo }}</span>
+                <span>{{ row.seats }} seats</span>
+              </div>
+              <div v-if="parsedExcelTables.length > 12" class="text-slate-400">...and {{ parsedExcelTables.length - 12 }} more tables</div>
+            </div>
+            <button
+              type="button"
+              @click="applyExcelTableLayout"
+              :disabled="isLoading || allOrders.length > 0"
+              class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition"
+            >
+              {{ allOrders.length > 0 ? 'Clear All Orders First to Apply' : 'Apply Uploaded Table Layout' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Option 2: Manual Table & Seat Setup -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div>
+            <h2 class="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <VIcon name="grid" size="sm" class="text-emerald-600 dark:text-emerald-400" />
+              <span>Manual Table &amp; Seat Setup</span>
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Quickly define how many tables exist and how many seats per table.
+            </p>
+          </div>
+
+          <form @submit.prevent="applyManualTableLayout" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Number of Tables *</label>
+                <input
+                  v-model.number="manualLayout.totalTables"
+                  type="number"
+                  min="1"
+                  max="500"
+                  required
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Seats Per Table *</label>
+                <input
+                  v-model.number="manualLayout.seatsPerTable"
+                  type="number"
+                  min="1"
+                  max="30"
+                  required
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex justify-between">
+              <span>Calculated Total Capacity:</span>
+              <strong class="font-mono text-emerald-700 dark:text-emerald-400">{{ (manualLayout.totalTables * manualLayout.seatsPerTable).toLocaleString() }} Seats</strong>
+            </div>
+
+            <button
+              type="submit"
+              :disabled="isLoading || allOrders.length > 0"
+              class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition shadow-sm"
+            >
+              {{ allOrders.length > 0 ? 'Clear All Orders First to Save' : 'Save Manual Table Layout' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Personnel User Details & Edit Modal -->
     <Transition
       enter-active-class="transition duration-150 ease-out"
@@ -808,13 +949,109 @@ onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
 })
 
-const adminTab = ref<'matrix' | 'registration' | 'users'>('matrix')
+const adminTab = ref<'matrix' | 'registration' | 'users' | 'tables'>('matrix')
 
 const adminTabs = computed(() => [
   { id: 'matrix' as const, label: 'Order Matrix & KPIs', icon: 'layers', badge: undefined },
+  { id: 'tables' as const, label: 'Tables & Layout', icon: 'grid', badge: undefined },
   { id: 'registration' as const, label: 'Registration Logs', icon: 'qr', badge: undefined },
   { id: 'users' as const, label: 'Personnel Users', icon: 'users', badge: undefined }
 ])
+
+// Tables & Layout editor state
+const tableLayoutFeedback = ref<{ ok: boolean; message: string } | null>(null)
+const parsedExcelTables = ref<Array<{ tableNo: number; seats: number }>>([])
+const parsedExcelTotalSeats = computed(() => parsedExcelTables.value.reduce((s, r) => s + r.seats, 0))
+const manualLayout = reactive({
+  totalTables: eventState.value?.capacity.totalTables || 200,
+  seatsPerTable: eventState.value?.capacity.seatsPerTable || 10
+})
+
+const handleClearAllOrders = async () => {
+  if (import.meta.client && !confirm(`Are you sure you want to clear all ${allOrders.value.length} active orders? This cannot be undone.`)) {
+    return
+  }
+  tableLayoutFeedback.value = null
+  try {
+    const res = await $fetch<any>('/api/orders', {
+      method: 'PATCH',
+      body: { action: 'clear_all_orders' }
+    })
+    if (res.state) eventState.value = res.state
+    tableLayoutFeedback.value = { ok: true, message: 'All orders cleared. You can now safely edit or upload the table layout.' }
+  } catch (err: any) {
+    tableLayoutFeedback.value = { ok: false, message: err?.data?.statusMessage || 'Failed to clear orders.' }
+  }
+}
+
+const handleExcelTableUpload = async (e: Event) => {
+  tableLayoutFeedback.value = null
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const XLSX = await import('xlsx')
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+    const sheet = wb.Sheets[wb.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet)
+
+    const map = new Map<number, number>()
+    for (const r of rows) {
+      const keys = Object.keys(r)
+      const tableKey = keys.find(k => /table/i.test(k)) || keys[0]
+      const seatKey = keys.find(k => /seat/i.test(k)) || keys[1]
+      const tVal = parseInt(String(r[tableKey] || '').replace(/\D/g, ''), 10)
+      const sVal = seatKey ? parseInt(String(r[seatKey] || '').replace(/\D/g, ''), 10) : 10
+      if (!isNaN(tVal) && tVal > 0) {
+        const current = map.get(tVal) || 0
+        map.set(tVal, Math.max(current, isNaN(sVal) ? 10 : Math.min(30, sVal)))
+      }
+    }
+
+    parsedExcelTables.value = Array.from(map.entries())
+      .map(([tableNo, seats]) => ({ tableNo, seats }))
+      .sort((a, b) => a.tableNo - b.tableNo)
+
+    if (parsedExcelTables.value.length === 0) {
+      tableLayoutFeedback.value = { ok: false, message: 'No valid table numbers found in the uploaded file.' }
+    }
+  } catch {
+    tableLayoutFeedback.value = { ok: false, message: 'Could not read Excel/CSV file. Please check the file format.' }
+  }
+}
+
+const applyExcelTableLayout = async () => {
+  tableLayoutFeedback.value = null
+  try {
+    const res = await $fetch<any>('/api/tables', {
+      method: 'POST',
+      body: { action: 'update_layout', customTables: parsedExcelTables.value }
+    })
+    if (res.state) eventState.value = res.state
+    tableLayoutFeedback.value = { ok: true, message: `Applied uploaded layout: ${parsedExcelTables.value.length} tables (${parsedExcelTotalSeats.value} seats).` }
+  } catch (err: any) {
+    tableLayoutFeedback.value = { ok: false, message: err?.data?.statusMessage || 'Failed to apply uploaded layout.' }
+  }
+}
+
+const applyManualTableLayout = async () => {
+  tableLayoutFeedback.value = null
+  try {
+    const res = await $fetch<any>('/api/tables', {
+      method: 'POST',
+      body: {
+        action: 'update_layout',
+        totalTables: manualLayout.totalTables,
+        seatsPerTable: manualLayout.seatsPerTable
+      }
+    })
+    if (res.state) eventState.value = res.state
+    tableLayoutFeedback.value = { ok: true, message: `Saved manual layout: ${manualLayout.totalTables} tables × ${manualLayout.seatsPerTable} seats.` }
+  } catch (err: any) {
+    tableLayoutFeedback.value = { ok: false, message: err?.data?.statusMessage || 'Failed to save manual layout.' }
+  }
+}
 
 // Personnel Users tab state
 const personnelUsers = computed(() => {
@@ -897,13 +1134,16 @@ const continentalOrderRate = computed(() => {
   return ((contCount / totalOrdersCount.value) * 100).toFixed(1)
 })
 
+const maxSeatsPerTable = computed(() => eventState.value?.capacity.seatsPerTable || 10)
+
 const availableTables = computed(() => {
+  const total = eventState.value?.capacity.totalTables || 200
   const set = new Set<number>()
+  for (let i = 1; i <= total; i++) set.add(i)
   for (const o of allOrders.value) {
     const num = parseInt(o.table.replace(/\D/g, ''), 10)
     if (!isNaN(num)) set.add(num)
   }
-  for (let i = 1; i <= 30; i++) set.add(i)
   return Array.from(set).sort((a, b) => a - b)
 })
 
@@ -917,7 +1157,7 @@ const matrixTables = computed(() => {
     const num = parseInt(filterTable.value, 10)
     tables = tables.filter(t => t === num)
   }
-  return tables.slice(0, 15) // Clean visible matrix view
+  return tables
 })
 
 const orderLookupMap = computed(() => {
@@ -952,6 +1192,14 @@ const getSeatCellLabel = (tableNum: number, seatNum: number) => {
   if (ord.status === 'delivered') return 'Served'
   if (ord.status === 'processed') return 'Printed'
   return 'Ordered'
+}
+
+const getSeatCellShortLabel = (tableNum: number, seatNum: number) => {
+  const ord = getSeatOrder(tableNum, seatNum)
+  if (!ord) return ''
+  if (ord.status === 'delivered') return 'S'
+  if (ord.status === 'processed') return 'P'
+  return 'O'
 }
 
 const getSeatTooltip = (tableNum: number, seatNum: number) => {

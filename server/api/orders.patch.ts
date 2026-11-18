@@ -75,9 +75,38 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Clear all orders (Safety check before editing table layout)
+  if (body.action === 'clear_all_orders') {
+    const { getSupabase } = await import('../utils/supabase')
+    const sb = getSupabase()
+    if (sb) {
+      await sb.from('orders').delete().neq('id', '')
+    }
+    db.prepare('DELETE FROM orders').run()
+    if (sb) {
+      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
+      const state = await fetchEventStateFromSupabase()
+      return { ok: true, state: state || getFullEventState() }
+    }
+    return { ok: true, state: getFullEventState() }
+  }
+
   // Batch print unprocessed orders
   if (body.action === 'batch_print') {
     const ids: string[] = Array.isArray(body.orderIds) ? body.orderIds : []
+    const { getSupabase } = await import('../utils/supabase')
+    const sb = getSupabase()
+    if (sb && ids.length > 0) {
+      const { data: rows } = await sb.from('orders').select('id, status, print_count').in('id', ids)
+      for (const r of rows || []) {
+        const nextStatus = r.status === 'unprocessed' ? 'processed' : r.status
+        await sb
+          .from('orders')
+          .update({ status: nextStatus, print_count: Number(r.print_count || 0) + 1 })
+          .eq('id', r.id)
+      }
+    }
+
     db.exec('BEGIN IMMEDIATE')
     try {
       const stmt = db.prepare(`
@@ -92,10 +121,56 @@ export default defineEventHandler(async (event) => {
       db.exec('ROLLBACK')
       throw err
     }
+
+    if (sb) {
+      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
+      const state = await fetchEventStateFromSupabase()
+      if (state) return { ok: true, updated: ids, state }
+    }
     return { ok: true, updated: ids, state: getFullEventState() }
   }
 
   const { orderId, status, printTicket } = body
+  const { getSupabase } = await import('../utils/supabase')
+  const sb = getSupabase()
+
+  if (sb) {
+    const { data: sbRows } = await sb.from('orders').select('*').eq('id', orderId).limit(1)
+    if (sbRows && sbRows.length > 0) {
+      const sbOrd = sbRows[0]
+      let nextStatus = sbOrd.status
+      let nextPrintCount = Number(sbOrd.print_count || 0)
+
+      if (status && ['unprocessed', 'processed', 'delivered'].includes(status)) {
+        nextStatus = status
+      }
+      if (printTicket) {
+        if (nextStatus === 'unprocessed') {
+          nextStatus = 'processed'
+        }
+        nextPrintCount += 1
+      }
+
+      await sb
+        .from('orders')
+        .update({ status: nextStatus, print_count: nextPrintCount })
+        .eq('id', orderId)
+
+      // Also mirror to local SQLite if present
+      db.prepare('UPDATE orders SET status = ?, print_count = ? WHERE id = ?').run(nextStatus, nextPrintCount, orderId)
+
+      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
+      const state = await fetchEventStateFromSupabase()
+      return {
+        ok: true,
+        orderId,
+        status: nextStatus,
+        printCount: nextPrintCount,
+        state: state || getFullEventState()
+      }
+    }
+  }
+
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any
   if (!order) {
     throw createError({ statusCode: 404, statusMessage: 'Order not found' })
