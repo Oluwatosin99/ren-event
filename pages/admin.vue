@@ -1,80 +1,103 @@
 <template>
   <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-    <!-- Top Executive Header (Glassmorphism + Renaissance Gradient) -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 via-emerald-600 to-orange-500/90 text-white p-5 sm:p-6 shadow-xl border border-white/20 backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <!-- Subtle Glass Highlight Orbs -->
-      <div class="absolute -top-12 -left-12 w-44 h-44 rounded-full bg-white/15 blur-2xl pointer-events-none"></div>
-      <div class="absolute -bottom-16 right-12 w-56 h-56 rounded-full bg-yellow-300/15 blur-3xl pointer-events-none"></div>
+    <!-- Top Executive Header (Isometric Hexagons at 19% Opacity + Watermarked Glass) -->
+    <div class="p-[2px] rounded-3xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-orange-500 shadow-xl">
+      <div class="relative overflow-hidden rounded-[22px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <!-- Soft Renaissance Ambient Wash -->
+        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-yellow-400/10 to-orange-500/10 pointer-events-none"></div>
 
-      <div class="relative z-10">
-        <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-emerald-50 text-[11px] font-bold uppercase tracking-wider">
-          <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-          <span>Live Operations Feed</span>
-        </div>
-        <h1 class="text-xl sm:text-3xl font-black tracking-tight mt-2 drop-shadow-sm">
-          End of Year Party Meal Order Dashboard
-        </h1>
-        <div class="text-xs text-white/90 font-mono mt-1.5 flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded-lg bg-white/15 backdrop-blur-md border border-white/20 font-bold">
-            {{ currentTimeFormatted }}
-          </span>
-          <span>• Real-Time Tracking</span>
-        </div>
-      </div>
+        <!-- Isometric Hexagon / Cube Pattern at 19% Opacity -->
+        <svg class="absolute inset-0 w-full h-full opacity-[0.19] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="renHexGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#10b981" />
+              <stop offset="50%" stop-color="#eab308" />
+              <stop offset="100%" stop-color="#f97316" />
+            </linearGradient>
+            <pattern id="isoHexPattern" width="56" height="96" patternUnits="userSpaceOnUse">
+              <path
+                d="M28 0 L56 16 L56 48 L28 64 L0 48 L0 16 Z M28 0 L28 32 M0 48 L28 32 L56 48 M28 64 L28 96 M0 48 L28 64 L56 48 M0 80 L28 64 L56 80"
+                fill="none"
+                stroke="url(#renHexGrad)"
+                stroke-width="1.5"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#isoHexPattern)" />
+        </svg>
 
-      <!-- Top Executive Filters: Quad, Table Number, Seat Number (Frosted Glass) -->
-      <div class="relative z-10 flex flex-wrap items-center gap-2.5 bg-white/15 backdrop-blur-md p-2.5 rounded-2xl border border-white/25 shadow-inner">
-        <!-- Quad Filter -->
-        <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Quad</label>
-          <select
-            v-model="filterQuad"
-            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL" class="bg-slate-900 text-white">All Quads</option>
-            <option value="A" class="bg-slate-900 text-white">Quad A (Tables 1–50)</option>
-            <option value="B" class="bg-slate-900 text-white">Quad B (Tables 51–100)</option>
-            <option value="C" class="bg-slate-900 text-white">Quad C (Tables 101–150)</option>
-            <option value="D" class="bg-slate-900 text-white">Quad D (Tables 151–200)</option>
-          </select>
-        </div>
-
-        <!-- Table Number Filter -->
-        <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Table Number</label>
-          <select
-            v-model="filterTable"
-            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL" class="bg-slate-900 text-white">All Tables</option>
-            <option v-for="t in availableTables" :key="t" :value="t" class="bg-slate-900 text-white">Table {{ t }}</option>
-          </select>
+        <div class="relative z-10">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold uppercase tracking-wider">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Live Operations Feed</span>
+            </div>
+          </div>
+          <h1 class="text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-2.5">
+            End of Year Party Meal Order Dashboard
+          </h1>
+          <div class="text-xs text-slate-600 dark:text-slate-300 font-mono mt-2 flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-white shadow-sm">
+              {{ currentTimeFormatted }}
+            </span>
+            <span class="font-sans font-semibold text-slate-500 dark:text-slate-400">• Real-Time Tracking Active</span>
+          </div>
         </div>
 
-        <!-- Seat Number Filter -->
-        <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Seat Number</label>
-          <select
-            v-model="filterSeat"
-            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL" class="bg-slate-900 text-white">All Seats</option>
-            <option v-for="s in 10" :key="s" :value="`Seat ${s}`" class="bg-slate-900 text-white">Seat {{ s }}</option>
-          </select>
-        </div>
+        <!-- Top Executive Filters: Quad, Table, Seat, Status (Frosted White Glass Card) -->
+        <div class="relative z-10 flex flex-wrap items-center gap-3 bg-white/90 dark:bg-slate-950/85 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <!-- Quad Filter -->
+          <div class="flex flex-col min-w-[120px] flex-1 sm:flex-initial">
+            <label class="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 px-1 mb-1">Quad</label>
+            <select
+              v-model="filterQuad"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="ALL">All Quads</option>
+              <option value="A">Quad A (Tables 1–50)</option>
+              <option value="B">Quad B (Tables 51–100)</option>
+              <option value="C">Quad C (Tables 101–150)</option>
+              <option value="D">Quad D (Tables 151–200)</option>
+            </select>
+          </div>
 
-        <!-- Status Filter (Processed / Unprocessed / Delivered) -->
-        <div class="flex flex-col">
-          <label class="text-[10px] font-extrabold uppercase text-white/80 px-1">Status</label>
-          <select
-            v-model="filterStatus"
-            class="px-3 py-1.5 rounded-xl bg-slate-950/35 backdrop-blur-sm text-white text-xs font-bold border border-white/25 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL" class="bg-slate-900 text-white">All Status</option>
-            <option value="unprocessed" class="bg-slate-900 text-white">Unprocessed Only</option>
-            <option value="processed" class="bg-slate-900 text-white">Processed (Printed)</option>
-            <option value="delivered" class="bg-slate-900 text-white">Served (Delivered)</option>
-          </select>
+          <!-- Table Number Filter -->
+          <div class="flex flex-col min-w-[120px] flex-1 sm:flex-initial">
+            <label class="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 px-1 mb-1">Table</label>
+            <select
+              v-model="filterTable"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="ALL">All Tables</option>
+              <option v-for="t in availableTables" :key="t" :value="t">Table {{ t }}</option>
+            </select>
+          </div>
+
+          <!-- Seat Number Filter -->
+          <div class="flex flex-col min-w-[110px] flex-1 sm:flex-initial">
+            <label class="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 px-1 mb-1">Seat</label>
+            <select
+              v-model="filterSeat"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="ALL">All Seats</option>
+              <option v-for="s in maxSeatsPerTable" :key="s" :value="`Seat ${s}`">Seat {{ s }}</option>
+            </select>
+          </div>
+
+          <!-- Status Filter (Processed / Unprocessed / Delivered) -->
+          <div class="flex flex-col min-w-[140px] flex-1 sm:flex-initial">
+            <label class="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 px-1 mb-1">Status</label>
+            <select
+              v-model="filterStatus"
+              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="ALL">All Status</option>
+              <option value="unprocessed">Unprocessed Only</option>
+              <option value="processed">Processed (Printed)</option>
+              <option value="delivered">Served (Delivered)</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
