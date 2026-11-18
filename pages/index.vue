@@ -179,93 +179,6 @@
     </div>
 
     <!-- =================================================================== -->
-    <!-- FAST SEAT LOOKUP & DIRECT FOOD ORDERING CARD                         -->
-    <!-- =================================================================== -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl transition-colors">
-      <div class="max-w-3xl mx-auto space-y-5">
-        <div class="text-center space-y-1.5">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-            <VIcon name="ticket" size="xs" />
-            <span>Fast Guest Seating Lookup</span>
-          </div>
-          <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-            Ready to Order? Confirm Your Table &amp; Seat
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Look up your assigned seat using your Ticket ID, or pick your Table &amp; Seat directly to jump straight into the menu.
-          </p>
-        </div>
-
-        <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
-          <!-- Ticket ID Lookup -->
-          <div class="flex flex-col sm:flex-row gap-2">
-            <input
-              v-model="guestTicketLookup"
-              type="text"
-              placeholder="Enter Ticket ID (e.g. REN-0842)"
-              class="w-full min-w-0 sm:flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-            />
-            <button
-              @click="handleTicketLookup"
-              type="button"
-              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <VIcon name="search" size="xs" />
-              <span>Find My Seat</span>
-            </button>
-          </div>
-
-          <div v-if="lookupFeedback" class="text-xs font-semibold flex items-center gap-1.5" :class="lookupFound ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'">
-            <VIcon :name="lookupFound ? 'checkCircle' : 'alert'" size="xs" />
-            <span>{{ lookupFeedback }}</span>
-          </div>
-
-          <!-- Guest Name, Table & Seat Dropdowns -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Guest Name</label>
-              <input
-                v-model="guestEntry.name"
-                type="text"
-                placeholder="Enter your name"
-                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Table Number</label>
-              <select
-                v-model="guestEntry.table"
-                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option v-for="t in 200" :key="t" :value="`Table ${t}`">Table {{ t }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Seat Number</label>
-              <select
-                v-model="guestEntry.seat"
-                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              >
-                <option v-for="s in 10" :key="s" :value="`Seat ${s}`">Seat {{ s }}</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="pt-2 flex justify-end">
-            <button
-              @click="handleEnterAsGuest"
-              type="button"
-              class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2"
-            >
-              <span>Proceed to Food Menu</span>
-              <VIcon name="arrowRight" size="sm" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- =================================================================== -->
     <!-- VENDOR & ADMIN LOGIN PANEL (SQLITE AUTH)                            -->
     <!-- =================================================================== -->
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl transition-colors">
@@ -373,22 +286,10 @@ const {
   isDark,
   userSession,
   enterAsGuest,
-  lookupGuestTicket,
   loginWithDb
 } = useEventSuite()
 
 const isStaffOrAdmin = computed(() => userSession.value?.role === 'admin' || userSession.value?.role === 'vendor')
-
-const guestTicketLookup = ref('')
-const lookupFeedback = ref('')
-const lookupFound = ref(false)
-
-const guestEntry = reactive({
-  name: '',
-  ticketId: '',
-  table: 'Table 12',
-  seat: 'Seat 4'
-})
 
 const loginForm = reactive({
   email: '',
@@ -400,33 +301,6 @@ const totalAvailablePlates = computed(() => {
   if (!eventState.value) return 0
   return eventState.value.menuItems.reduce((sum, item) => sum + (item.manualClosed ? 0 : item.stock), 0)
 })
-
-const handleTicketLookup = async () => {
-  lookupFeedback.value = ''
-  if (!guestTicketLookup.value.trim()) return
-  const res = await lookupGuestTicket(guestTicketLookup.value.trim())
-  if (res.found && res.attendee) {
-    lookupFound.value = true
-    guestEntry.name = res.attendee.name
-    guestEntry.ticketId = res.attendee.ticketId
-    guestEntry.table = res.attendee.table
-    guestEntry.seat = res.attendee.seat
-    lookupFeedback.value = `Found ${res.attendee.type}: ${res.attendee.name} (${res.attendee.table} • ${res.attendee.seat})`
-  } else {
-    lookupFound.value = false
-    lookupFeedback.value = 'Ticket ID not found — you can still enter your Name, Table & Seat below.'
-  }
-}
-
-const handleEnterAsGuest = () => {
-  enterAsGuest({
-    name: guestEntry.name.trim() || 'Event Guest',
-    ticketId: guestEntry.ticketId,
-    table: guestEntry.table,
-    seat: guestEntry.seat
-  })
-  router.push('/menu')
-}
 
 const handleDbLogin = async () => {
   loginError.value = ''
