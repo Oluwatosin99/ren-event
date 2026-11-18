@@ -227,16 +227,30 @@ const visibleNavItems = computed(() => {
     return [
       {
         to: '/admin',
-        label: 'Admin & Kitchen',
+        label: 'Admin',
         shortLabel: 'Admin',
         icon: 'layers',
-        badge: unprocessedOrdersCount.value || undefined
+        badge: undefined
       },
       {
         to: '/scanner',
-        label: 'Gate Scanner',
+        label: 'Gate Scan',
         shortLabel: 'Gate',
         icon: 'qr',
+        badge: undefined
+      },
+      {
+        to: '/vendor',
+        label: 'Kitchen Orders',
+        shortLabel: 'Orders',
+        icon: 'printer',
+        badge: unprocessedOrdersCount.value || undefined
+      },
+      {
+        to: '/vendor/menu',
+        label: 'Menu Uploader',
+        shortLabel: 'Menu',
+        icon: 'upload',
         badge: undefined
       },
       {
@@ -254,7 +268,7 @@ const visibleNavItems = computed(() => {
 
 const isActiveRoute = (path: string) => {
   if (path === '/') return route.path === '/'
-  if (path === '/vendor') return route.path.startsWith('/vendor')
+  if (path === '/vendor') return route.path === '/vendor'
   return route.path.toLowerCase().startsWith(path.toLowerCase())
 }
 
