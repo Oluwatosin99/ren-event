@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-export type UserRole = 'admin' | 'vendor' | 'guest'
+export type UserRole = 'admin' | 'vendor' | 'delivery' | 'registrar' | 'guest'
 
 export interface DbUser {
   id: number
@@ -76,12 +76,16 @@ export interface FoodOrder {
 export interface GuestAttendee {
   ticketId: string
   name: string
-  type: 'Pre-Registered (Yes)' | 'Spouse / Plus-One' | 'Third-Party' | 'On-Site Registered'
+  type: 'Pre-Registered (Yes)' | 'Spouse / Plus-One' | 'Third-Party' | 'On-Site Registered' | 'VIP'
   sponsorStaffId: string
   table: string
   seat: string
   checkedIn: boolean
   checkedInAt?: string
+  phone?: string
+  email?: string
+  admittedBy?: string
+  isVip?: boolean
 }
 
 export interface EventState {
@@ -135,7 +139,7 @@ function initSchemaAndSeed(db: DatabaseSync) {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('admin', 'vendor', 'guest')),
+      role TEXT NOT NULL CHECK(role IN ('admin', 'vendor', 'delivery', 'registrar', 'guest')),
       department TEXT NOT NULL DEFAULT 'Event Operations',
       created_at INTEGER NOT NULL
     );
@@ -199,20 +203,40 @@ function initSchemaAndSeed(db: DatabaseSync) {
     );
   `)
 
-  // Seed users if empty
-  const userCount = (db.prepare('SELECT COUNT(*) as cnt FROM users').get() as { cnt: number }).cnt
-  if (userCount === 0) {
-    const now = Date.now()
-    const insertUser = db.prepare(`
-      INSERT INTO users (name, email, password, role, department, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+  // Migrate existing `users` table if its CHECK constraint predates 'delivery' / 'registrar'
+  const usersSchemaRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql?: string } | undefined
+  if (usersSchemaRow?.sql && !usersSchemaRow.sql.includes("'registrar'")) {
+    db.exec(`
+      CREATE TABLE users_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('admin', 'vendor', 'delivery', 'registrar', 'guest')),
+        department TEXT NOT NULL DEFAULT 'Event Operations',
+        created_at INTEGER NOT NULL
+      );
+      INSERT INTO users_new (id, name, email, password, role, department, created_at)
+      SELECT id, name, email, password, role, department, created_at FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_new RENAME TO users;
     `)
-    insertUser.run('Tech Admin (Ikedichi / Linus)', 'admin@renaissance.ng', 'admin123', 'admin', 'Reconstituted Tech Group', now)
-    insertUser.run('Tajudeen (Builders Admin)', 'tajudeen@renaissance.ng', 'admin123', 'admin', 'Platform Engineering', now)
-    insertUser.run('Lagos Royal Kitchens (Vendor)', 'vendor@renaissance.ng', 'vendor123', 'vendor', 'Food Vendor & Kitchen Ops', now)
-    insertUser.run('Catering Focal Point', 'catering@renaissance.ng', 'vendor123', 'vendor', 'Catering & XP-80T Dispatch', now)
-    insertUser.run('Oluwatosin Dawodu', 'guest@renaissance.ng', 'guest123', 'guest', 'Event Attendee', now)
   }
+
+  // Seed default personnel users if missing
+  const nowUserSeed = Date.now()
+  const insertUser = db.prepare(`
+    INSERT OR IGNORE INTO users (name, email, password, role, department, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  insertUser.run('Tech Admin (Ikedichi / Linus)', 'admin@renaissance.ng', 'admin123', 'admin', 'Reconstituted Tech Group', nowUserSeed)
+  insertUser.run('Tajudeen (Builders Admin)', 'tajudeen@renaissance.ng', 'admin123', 'admin', 'Platform Engineering', nowUserSeed)
+  insertUser.run('Lagos Royal Kitchens (Vendor)', 'vendor@renaissance.ng', 'vendor123', 'vendor', 'Food Vendor & Kitchen Ops', nowUserSeed)
+  insertUser.run('Catering Focal Point', 'catering@renaissance.ng', 'vendor123', 'vendor', 'Catering & XP-80T Dispatch', nowUserSeed)
+  insertUser.run('Gate Officer — Chinedu', 'gate1@renaissance.ng', 'gate123', 'registrar', 'Gate & Admission', nowUserSeed)
+  insertUser.run('Gate Officer — Zainab', 'gate2@renaissance.ng', 'gate123', 'registrar', 'Gate & Admission', nowUserSeed)
+  insertUser.run('Numbere Tamunoemi (Delivery)', 'delivery@renaissance.ng', 'delivery123', 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('Oluwatosin Dawodu', 'guest@renaissance.ng', 'guest123', 'guest', 'Event Attendee', nowUserSeed)
 
   // Seed settings if empty
   const settingsCount = (db.prepare('SELECT COUNT(*) as cnt FROM event_settings').get() as { cnt: number }).cnt
@@ -243,6 +267,20 @@ function initSchemaAndSeed(db: DatabaseSync) {
   }
 
   // Safe schema migration for existing SQLite databases
+  const attCols = (db.prepare('PRAGMA table_info(attendees)').all() as Array<{ name: string }>).map(c => c.name)
+  if (!attCols.includes('phone')) {
+    db.exec(`ALTER TABLE attendees ADD COLUMN phone TEXT NOT NULL DEFAULT ''`)
+  }
+  if (!attCols.includes('email')) {
+    db.exec(`ALTER TABLE attendees ADD COLUMN email TEXT NOT NULL DEFAULT ''`)
+  }
+  if (!attCols.includes('admitted_by')) {
+    db.exec(`ALTER TABLE attendees ADD COLUMN admitted_by TEXT NOT NULL DEFAULT ''`)
+  }
+  if (!attCols.includes('is_vip')) {
+    db.exec(`ALTER TABLE attendees ADD COLUMN is_vip INTEGER NOT NULL DEFAULT 0`)
+  }
+
   const orderCols = (db.prepare('PRAGMA table_info(orders)').all() as Array<{ name: string }>).map(c => c.name)
   if (!orderCols.includes('served_by')) {
     db.exec(`ALTER TABLE orders ADD COLUMN served_by TEXT NOT NULL DEFAULT ''`)
@@ -422,7 +460,11 @@ export function getFullEventState(): EventState {
     table: r.table_no,
     seat: r.seat_no,
     checkedIn: Boolean(r.checked_in),
-    checkedInAt: r.checked_in_at || undefined
+    checkedInAt: r.checked_in_at || undefined,
+    phone: r.phone || undefined,
+    email: r.email || undefined,
+    admittedBy: r.admitted_by || undefined,
+    isVip: Boolean(r.is_vip) || r.guest_type === 'VIP'
   }))
 
   const userRows = db.prepare('SELECT id, name, email, role, department, created_at FROM users ORDER BY id ASC').all() as any[]

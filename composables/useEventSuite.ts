@@ -61,7 +61,7 @@ export const useEventSuite = () => {
         const saved = localStorage.getItem('ren-session')
         if (saved) {
           const parsed = JSON.parse(saved)
-          if (parsed && ['admin', 'vendor', 'guest'].includes(parsed.role)) {
+          if (parsed && ['admin', 'vendor', 'delivery', 'registrar', 'guest'].includes(parsed.role)) {
             userSession.value = parsed
           }
         }

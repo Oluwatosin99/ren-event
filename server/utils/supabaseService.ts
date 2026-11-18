@@ -100,7 +100,11 @@ export async function fetchEventStateFromSupabase(): Promise<EventState | null> 
       table: r.table_no,
       seat: r.seat_no,
       checkedIn: Boolean(r.checked_in),
-      checkedInAt: r.checked_in_at || undefined
+      checkedInAt: r.checked_in_at || undefined,
+      phone: r.phone || undefined,
+      email: r.email || undefined,
+      admittedBy: r.admitted_by || undefined,
+      isVip: Boolean(r.is_vip) || r.guest_type === 'VIP'
     }))
 
     // 4. Fetch settings

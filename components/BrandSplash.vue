@@ -54,23 +54,17 @@ let t1: ReturnType<typeof setTimeout> | null = null
 const dismiss = () => {
   visible.value = false
   splashPlayed.value = true
-  if (import.meta.client) {
-    try {
-      sessionStorage.setItem('ren-splash-shown', 'true')
-    } catch {}
-  }
 }
 
 onMounted(() => {
-  // If already played during this in-memory session or stored in sessionStorage, dismiss immediately
-  if (splashPlayed.value || (import.meta.client && sessionStorage.getItem('ren-splash-shown') === 'true')) {
+  // Play once per full page load (e.g. /Orders, /Personnel, /), skip on client-side route changes
+  if (splashPlayed.value) {
     visible.value = false
-    splashPlayed.value = true
     return
   }
   t1 = setTimeout(() => {
     dismiss()
-  }, 2800)
+  }, 3000)
 })
 
 onBeforeUnmount(() => {
@@ -83,7 +77,7 @@ onBeforeUnmount(() => {
   width: 0%;
   background: linear-gradient(90deg, #008751 0%, #f97316 25%, #facc15 50%, #dc2626 75%, #008751 100%);
   background-size: 200% 100%;
-  animation: splashFill 2.6s cubic-bezier(0.22, 1, 0.36, 1) forwards, gradientSweep 1.6s linear infinite;
+  animation: splashFill 3s cubic-bezier(0.22, 1, 0.36, 1) forwards, gradientSweep 1.6s linear infinite;
 }
 
 @keyframes splashFill {

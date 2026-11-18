@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     const name = String(body.name || '').trim()
     const email = String(body.email || '').trim().toLowerCase()
     const password = String(body.password || 'renaissance123').trim()
-    const role = ['admin', 'vendor', 'guest'].includes(body.role) ? body.role : 'guest'
+    const role = ['admin', 'vendor', 'delivery', 'registrar', 'guest'].includes(body.role) ? body.role : 'guest'
     const department = String(body.department || 'Event Team').trim()
 
     if (!name || !email) {
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
 
   if (body.action === 'update_role') {
     const id = Number(body.userId)
-    const role = ['admin', 'vendor', 'guest'].includes(body.role) ? body.role : 'guest'
+    const role = ['admin', 'vendor', 'delivery', 'registrar', 'guest'].includes(body.role) ? body.role : 'guest'
     db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id)
     return { ok: true, state: getFullEventState() }
   }

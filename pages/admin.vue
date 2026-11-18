@@ -111,11 +111,11 @@
 
         <!-- % Served Rate -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center gap-4">
-          <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <div class="p-3 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
             <VIcon name="bolt" size="md" />
           </div>
           <div>
-            <div class="text-3xl font-black text-blue-600 dark:text-blue-400 font-mono">{{ servedRate }}%</div>
+            <div class="text-3xl font-black text-amber-600 dark:text-amber-400 font-mono">{{ servedRate }}%</div>
             <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Served Ratio</div>
           </div>
         </div>
@@ -184,19 +184,23 @@
           <div>
             <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">Order Matrix (Real-Time Service)</h2>
             <p class="text-xs text-slate-500 dark:text-slate-400">
-              Live status: 🟨 Printed / Preparing | 🟩 Served to Guest | ⬜ No Order / Unprocessed
+              Red = Order Placed | Yellow = Processing / Receipt Printed | Green = Marked Delivered
             </p>
           </div>
 
           <!-- Quick Legend -->
           <div class="flex items-center gap-3 text-xs font-bold">
             <div class="flex items-center gap-1.5">
+              <div class="w-3.5 h-3.5 rounded bg-red-600"></div>
+              <span>Ordered</span>
+            </div>
+            <div class="flex items-center gap-1.5">
               <div class="w-3.5 h-3.5 rounded bg-yellow-400"></div>
               <span>Printed</span>
             </div>
             <div class="flex items-center gap-1.5">
               <div class="w-3.5 h-3.5 rounded bg-emerald-600"></div>
-              <span>Served</span>
+              <span>Delivered</span>
             </div>
           </div>
         </div>
@@ -327,7 +331,9 @@
             class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
           >
             <option value="admin">Admin (Full Access)</option>
-            <option value="vendor">Vendor (Orders &amp; Dishes)</option>
+            <option value="registrar">Gate Register / Scanner</option>
+            <option value="delivery">Delivery Checker (Vendor Agent)</option>
+            <option value="vendor">Kitchen Vendor (Orders &amp; Dishes)</option>
             <option value="guest">Guest (Food Ordering Only)</option>
           </select>
         </div>
@@ -342,6 +348,155 @@
         </div>
       </form>
     </div>
+
+    <!-- =================================================================== -->
+    <!-- GATE REGISTRATION LOGS & VIP / NON-VIP ADMISSION TRACKER             -->
+    <!-- =================================================================== -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <VIcon name="qr" size="sm" class="text-orange-500" />
+            <span>Gate Registration &amp; Admission Logs</span>
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Track scanner personnel admission counts and filter admitted guests by VIP and Non-VIP tiers
+          </p>
+        </div>
+      </div>
+
+      <!-- Summary / Sum Block -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Total Admitted</div>
+          <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+            {{ admittedAttendees.length }}
+          </div>
+          <div class="text-[10px] text-slate-400">Gate Verified Attendees</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">VIP Admitted</div>
+          <div class="text-2xl font-black text-yellow-600 dark:text-yellow-400 font-mono mt-0.5">
+            {{ vipAdmittedCount }}
+          </div>
+          <div class="text-[10px] text-slate-400">VIP Tier Guests</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Non-VIP Admitted</div>
+          <div class="text-2xl font-black text-orange-600 dark:text-orange-400 font-mono mt-0.5">
+            {{ nonVipAdmittedCount }}
+          </div>
+          <div class="text-[10px] text-slate-400">Regular / On-Site / Plus-One</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Scanner Personnel</div>
+          <div class="text-2xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
+            {{ scannerPersonnelStats.length }}
+          </div>
+          <div class="text-[10px] text-slate-400">Active Gate Officers</div>
+        </div>
+      </div>
+
+      <!-- Scanner Personnel Admission Counts -->
+      <div class="space-y-2">
+        <div class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Scanner Personnel Logs (Admissions per Officer)
+        </div>
+        <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-950 text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="py-2.5 px-4">Scanner Personnel</th>
+                <th class="py-2.5 px-4 text-right">Total Admitted</th>
+                <th class="py-2.5 px-4 text-right">VIP</th>
+                <th class="py-2.5 px-4 text-right">Non-VIP</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="officer in scannerPersonnelStats" :key="officer.name" class="hover:bg-slate-50/70 dark:hover:bg-slate-950/40">
+                <td class="py-2.5 px-4 font-bold text-slate-900 dark:text-white">{{ officer.name }}</td>
+                <td class="py-2.5 px-4 text-right font-mono font-black text-emerald-600 dark:text-emerald-400">{{ officer.total }}</td>
+                <td class="py-2.5 px-4 text-right font-mono font-bold text-yellow-600 dark:text-yellow-400">{{ officer.vip }}</td>
+                <td class="py-2.5 px-4 text-right font-mono font-bold text-orange-600 dark:text-orange-400">{{ officer.nonVip }}</td>
+              </tr>
+              <tr v-if="scannerPersonnelStats.length === 0">
+                <td colspan="4" class="py-6 text-center text-slate-400">No gate admissions logged yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admitted Guests Table with VIP / Non-VIP Filter -->
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Admitted Guests Log ({{ filteredAdmittedGuests.length }})
+          </div>
+          <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+            <button
+              v-for="tab in [
+                { id: 'all', label: 'All' },
+                { id: 'vip', label: 'VIP Only' },
+                { id: 'non_vip', label: 'Non-VIP Only' }
+              ]"
+              :key="tab.id"
+              type="button"
+              @click="vipFilter = tab.id as any"
+              class="px-3 py-1 rounded-lg text-[11px] font-bold transition"
+              :class="vipFilter === tab.id
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-950 text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="py-2.5 px-4">Ticket ID</th>
+                <th class="py-2.5 px-4">Guest Name</th>
+                <th class="py-2.5 px-4">Tier</th>
+                <th class="py-2.5 px-4">Contact</th>
+                <th class="py-2.5 px-4">Table &amp; Seat</th>
+                <th class="py-2.5 px-4">Admitted By</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="att in filteredAdmittedGuests" :key="att.ticketId" class="hover:bg-slate-50/70 dark:hover:bg-slate-950/40">
+                <td class="py-2.5 px-4 font-mono font-bold text-orange-600 dark:text-orange-400">{{ att.ticketId }}</td>
+                <td class="py-2.5 px-4 font-bold text-slate-900 dark:text-white">{{ att.name }}</td>
+                <td class="py-2.5 px-4">
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
+                    :class="(att.isVip || att.type === 'VIP')
+                      ? 'bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border border-yellow-500/40'
+                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'"
+                  >
+                    {{ (att.isVip || att.type === 'VIP') ? 'VIP' : 'Non-VIP' }}
+                  </span>
+                </td>
+                <td class="py-2.5 px-4 text-slate-500 dark:text-slate-400">
+                  <div>{{ att.phone || '—' }}</div>
+                  <div class="text-[10px] font-mono">{{ att.email || '—' }}</div>
+                </td>
+                <td class="py-2.5 px-4 font-bold text-slate-800 dark:text-slate-200">{{ att.table }} • {{ att.seat }}</td>
+                <td class="py-2.5 px-4">
+                  <div class="font-semibold text-slate-700 dark:text-slate-300">{{ att.admittedBy || 'Gate Pre-Sync' }}</div>
+                  <div class="text-[10px] text-slate-400">{{ att.checkedInAt || 'Checked-In' }}</div>
+                </td>
+              </tr>
+              <tr v-if="filteredAdmittedGuests.length === 0">
+                <td colspan="6" class="py-8 text-center text-slate-400">No admitted guests match this filter.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -354,8 +509,44 @@ const router = useRouter()
 // Guard: Only admins allowed
 onMounted(() => {
   if (userSession.value.role !== 'admin') {
-    router.replace('/')
+    router.replace('/Personnel')
   }
+})
+
+const vipFilter = ref<'all' | 'vip' | 'non_vip'>('all')
+
+const admittedAttendees = computed(() => {
+  return (eventState.value?.attendees || []).filter(a => a.checkedIn)
+})
+
+const vipAdmittedCount = computed(() => {
+  return admittedAttendees.value.filter(a => a.isVip || a.type === 'VIP').length
+})
+
+const nonVipAdmittedCount = computed(() => {
+  return admittedAttendees.value.filter(a => !(a.isVip || a.type === 'VIP')).length
+})
+
+const scannerPersonnelStats = computed(() => {
+  const map = new Map<string, { name: string; total: number; vip: number; nonVip: number }>()
+  for (const att of admittedAttendees.value) {
+    const officer = att.admittedBy || 'Gate Pre-Sync'
+    const entry = map.get(officer) || { name: officer, total: 0, vip: 0, nonVip: 0 }
+    entry.total++
+    if (att.isVip || att.type === 'VIP') entry.vip++
+    else entry.nonVip++
+    map.set(officer, entry)
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total)
+})
+
+const filteredAdmittedGuests = computed(() => {
+  return admittedAttendees.value.filter(a => {
+    const isVip = a.isVip || a.type === 'VIP'
+    if (vipFilter.value === 'vip') return isVip
+    if (vipFilter.value === 'non_vip') return !isVip
+    return true
+  })
 })
 
 const filterQuad = ref<string>('ALL')
@@ -440,15 +631,15 @@ const getSeatCellClass = (tableNum: number, seatNum: number) => {
   if (ord.status === 'processed') {
     return 'bg-yellow-400 text-slate-950 font-black shadow-sm'
   }
-  return 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+  return 'bg-red-600 text-white font-black shadow-sm'
 }
 
 const getSeatCellLabel = (tableNum: number, seatNum: number) => {
   const ord = getSeatOrder(tableNum, seatNum)
   if (!ord) return ''
   if (ord.status === 'delivered') return 'Served'
-  if (ord.status === 'processed') return 'Ready'
-  return 'Prep'
+  if (ord.status === 'processed') return 'Printed'
+  return 'Ordered'
 }
 
 const getSeatTooltip = (tableNum: number, seatNum: number) => {

@@ -72,10 +72,33 @@
 
     <!-- Scanner / Search Bar -->
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
-      <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-        <VIcon name="camera" size="xs" class="text-emerald-500" />
-        <span>Scan QR Code or Enter Order ID / Ticket</span>
-      </h2>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-sm font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+          <VIcon name="camera" size="xs" class="text-emerald-500" />
+          <span>Scan Ticket QR or Enter Receipt / Order ID</span>
+        </h2>
+
+        <button
+          @click="toggleCameraScanner"
+          type="button"
+          class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-sm"
+          :class="cameraActive
+            ? 'bg-red-600 hover:bg-red-500 text-white'
+            : 'bg-orange-500 hover:bg-orange-600 text-white'"
+        >
+          <VIcon name="camera" size="xs" />
+          <span>{{ cameraActive ? 'Stop Scanner' : 'Start Delivery QR Scanner' }}</span>
+        </button>
+      </div>
+
+      <!-- Optional Live Camera Preview -->
+      <div v-if="cameraActive" class="rounded-2xl overflow-hidden bg-slate-950 border-2 border-orange-500/60 relative h-52 flex items-center justify-center">
+        <video ref="videoRef" autoplay playsinline class="w-full h-full object-cover"></video>
+        <div class="absolute inset-0 pointer-events-none border-2 border-emerald-400/70 m-6 rounded-xl"></div>
+        <div class="absolute bottom-2 left-3 right-3 text-center text-[11px] font-bold text-white bg-slate-950/75 px-3 py-1 rounded-lg">
+          Point camera at guest meal receipt QR code or enter ID below
+        </div>
+      </div>
 
       <form @submit.prevent="handleScanSubmit" class="flex flex-col sm:flex-row gap-2">
         <div class="relative flex-1">
@@ -95,7 +118,7 @@
           class="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2 shrink-0"
         >
           <VIcon name="check" size="sm" />
-          <span>{{ isScanning ? 'Verifying...' : 'Mark Served' }}</span>
+          <span>{{ isScanning ? 'Verifying...' : 'Mark Delivered' }}</span>
         </button>
       </form>
 
@@ -235,10 +258,13 @@
 </template>
 
 <script setup lang="ts">
-const { eventState, updateOrderStatus } = useEventSuite()
+const { eventState, userSession, updateOrderStatus } = useEventSuite()
 
 const scanInput = ref('')
 const scanInputRef = ref<HTMLInputElement | null>(null)
+const videoRef = ref<HTMLVideoElement | null>(null)
+const cameraActive = ref(false)
+let mediaStream: MediaStream | null = null
 const isScanning = ref(false)
 const scanFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 const logFilterQuery = ref('')
@@ -257,11 +283,44 @@ const serverRoster = [
 const activeServerName = ref('Numbere Tamunoemi')
 
 onMounted(() => {
+  if (userSession.value?.loggedIn && userSession.value.name) {
+    const matched = serverRoster.find(s => userSession.value.name.toLowerCase().includes(s.toLowerCase().split(' ')[0]))
+    if (matched) activeServerName.value = matched
+  }
   if (import.meta.client) {
     const saved = localStorage.getItem('ren-server-name')
     if (saved && serverRoster.includes(saved)) {
       activeServerName.value = saved
     }
+  }
+})
+
+const toggleCameraScanner = async () => {
+  if (cameraActive.value) {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(t => t.stop())
+      mediaStream = null
+    }
+    cameraActive.value = false
+    return
+  }
+  if (import.meta.client && navigator.mediaDevices?.getUserMedia) {
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      cameraActive.value = true
+      nextTick(() => {
+        if (videoRef.value) videoRef.value.srcObject = mediaStream
+      })
+    } catch {
+      scanFeedback.value = { type: 'error', message: 'Camera permission unavailable. Enter Order or Receipt ID manually below.' }
+    }
+  }
+}
+
+onUnmounted(() => {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop())
+    mediaStream = null
   }
 })
 

@@ -32,7 +32,10 @@
         </NuxtLink>
 
         <!-- Role-Filtered Desktop & Tablet Navigation -->
-        <nav class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+        <nav
+          v-if="visibleNavItems.length > 0"
+          class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800"
+        >
           <NuxtLink
             v-for="item in visibleNavItems"
             :key="item.to"
@@ -68,16 +71,16 @@
             <span class="hidden sm:inline">{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
           </button>
 
-          <!-- Switch Portal / Sign Out -->
+          <!-- Sign Out (Personnel Only) -->
           <button
-            v-if="userSession.loggedIn"
+            v-if="userSession.loggedIn && userSession.role !== 'guest'"
             @click="handleSwitchPortal"
             type="button"
             class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-400 border border-orange-500/30 text-xs font-bold transition-all flex items-center gap-1.5"
-            title="Return to Landing Entry Portal"
+            title="Sign Out to Personnel Login"
           >
             <VIcon name="logout" size="xs" />
-            <span class="hidden sm:inline">Switch Role</span>
+            <span class="hidden sm:inline">Sign Out</span>
           </button>
         </div>
       </div>
@@ -89,7 +92,10 @@
     </main>
 
     <!-- Role-Filtered Mobile Bottom Navigation (iPhone & Android Thumb Bar) -->
-    <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-1.5 py-1.5 flex items-center justify-around transition-colors duration-300">
+    <nav
+      v-if="visibleNavItems.length > 0"
+      class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 px-1.5 py-1.5 flex items-center justify-around transition-colors duration-300"
+    >
       <NuxtLink
         v-for="item in visibleNavItems"
         :key="item.to"
@@ -156,7 +162,9 @@ const unprocessedOrdersCount = computed(() => {
 })
 
 const roleLabel = computed(() => {
-  if (userSession.value.role === 'admin') return 'Admin (Tech Builder)'
+  if (userSession.value.role === 'admin') return 'Admin'
+  if (userSession.value.role === 'registrar') return 'Gate Scanner'
+  if (userSession.value.role === 'delivery') return 'Delivery Checker'
   if (userSession.value.role === 'vendor') return 'Food Vendor'
   return 'Guest'
 })
@@ -165,7 +173,7 @@ const roleBadgeClasses = computed(() => {
   if (userSession.value.role === 'admin') {
     return 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30'
   }
-  if (userSession.value.role === 'vendor') {
+  if (userSession.value.role === 'registrar' || userSession.value.role === 'vendor') {
     return 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30'
   }
   return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
@@ -173,82 +181,111 @@ const roleBadgeClasses = computed(() => {
 
 const roleDotClasses = computed(() => {
   if (userSession.value.role === 'admin') return 'bg-red-500'
-  if (userSession.value.role === 'vendor') return 'bg-orange-500'
+  if (userSession.value.role === 'registrar' || userSession.value.role === 'vendor') return 'bg-orange-500'
   return 'bg-emerald-500'
 })
 
-// Strict Role-Based Navigation:
-// - Guest on Food Menu: ONLY sees "Order Food" (+ Entry Home)
-// - Gate Scanner route (/scanner): Shows Entry, QR Gate & Order Food
-// - Vendor: ONLY sees "Orders & Print" + "Menu & Plates"
-// - Admin: Sees ALL
+// Strict Role-Based Navigation (Combined tabs on mobile to keep bottom bar clean):
+// - Placeholder (/), Guest (/Orders), Personnel Login (/Personnel): No nav clutter
+// - Registrar: ONLY Gate Scanner
+// - Delivery: ONLY Delivery Scanner
+// - Vendor: Orders & Print + Menu & Plates
+// - Admin: 4 clean combined tabs (Admin Matrix, Gate Scan, Kitchen, Delivery)
 const visibleNavItems = computed(() => {
+  const path = route.path.toLowerCase()
+  if (path === '/' || path === '/orders' || path === '/menu' || path === '/personnel') {
+    return []
+  }
+
   const role = userSession.value.role
 
-  const allItems = [
-    {
-      to: '/',
-      label: 'Portal Entry',
-      shortLabel: 'Entry',
-      icon: 'home',
-      show: role === 'admin' || role === 'guest'
-    },
-    {
-      to: '/scanner',
-      label: 'QR Gate',
-      shortLabel: 'QR Gate',
-      icon: 'qr',
-      show: role === 'admin' || route.path === '/scanner' || route.path === '/'
-    },
-    {
-      to: '/menu',
-      label: 'Order Food',
-      shortLabel: 'Order Food',
-      icon: 'utensils',
-      show: role === 'admin' || role === 'guest'
-    },
-    {
-      to: '/vendor',
-      label: 'Orders & Print',
-      shortLabel: 'Orders',
-      icon: 'printer',
-      badge: unprocessedOrdersCount.value || undefined,
-      show: role === 'admin' || role === 'vendor'
-    },
-    {
-      to: '/vendor/menu',
-      label: 'Menu & Plates',
-      shortLabel: 'Menu Upload',
-      icon: 'upload',
-      show: role === 'admin' || role === 'vendor'
-    },
-    {
-      to: '/delivery',
-      label: 'Deliveries',
-      shortLabel: 'Deliver',
-      icon: 'checkCircle',
-      show: role === 'admin' || role === 'vendor' || route.path === '/delivery'
-    },
-    {
-      to: '/admin',
-      label: 'Admin Matrix',
-      shortLabel: 'Admin',
-      icon: 'layers',
-      show: role === 'admin'
-    }
-  ]
+  if (role === 'registrar') {
+    return [
+      {
+        to: '/scanner',
+        label: 'Gate Scanner',
+        shortLabel: 'Gate Scan',
+        icon: 'qr',
+        badge: undefined
+      }
+    ]
+  }
 
-  return allItems.filter(item => item.show)
+  if (role === 'delivery') {
+    return [
+      {
+        to: '/delivery',
+        label: 'Delivery Scanner',
+        shortLabel: 'Delivery',
+        icon: 'checkCircle',
+        badge: undefined
+      }
+    ]
+  }
+
+  if (role === 'vendor') {
+    return [
+      {
+        to: '/vendor',
+        label: 'Orders & Print',
+        shortLabel: 'Orders',
+        icon: 'printer',
+        badge: unprocessedOrdersCount.value || undefined
+      },
+      {
+        to: '/vendor/menu',
+        label: 'Menu & Plates',
+        shortLabel: 'Menu',
+        icon: 'upload',
+        badge: undefined
+      }
+    ]
+  }
+
+  if (role === 'admin') {
+    return [
+      {
+        to: '/admin',
+        label: 'Admin Matrix',
+        shortLabel: 'Admin',
+        icon: 'layers',
+        badge: undefined
+      },
+      {
+        to: '/scanner',
+        label: 'Gate Scanner',
+        shortLabel: 'Gate',
+        icon: 'qr',
+        badge: undefined
+      },
+      {
+        to: '/vendor',
+        label: 'Kitchen & Menu',
+        shortLabel: 'Kitchen',
+        icon: 'printer',
+        badge: unprocessedOrdersCount.value || undefined
+      },
+      {
+        to: '/delivery',
+        label: 'Delivery',
+        shortLabel: 'Delivery',
+        icon: 'checkCircle',
+        badge: undefined
+      }
+    ]
+  }
+
+  return []
 })
 
 const isActiveRoute = (path: string) => {
   if (path === '/') return route.path === '/'
-  if (path === '/vendor') return route.path === '/vendor'
-  return route.path.startsWith(path)
+  if (path === '/vendor') return route.path.startsWith('/vendor')
+  return route.path.toLowerCase().startsWith(path.toLowerCase())
 }
 
 const handleSwitchPortal = () => {
   logoutSession()
-  router.push('/')
+  router.push('/Personnel')
 }
 </script>

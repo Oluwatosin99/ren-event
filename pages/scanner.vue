@@ -251,14 +251,35 @@
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sponsor / Staff ID *</label>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Phone Number *</label>
               <input
-                v-model="postRegForm.sponsor"
-                type="text"
+                v-model="postRegForm.phone"
+                type="tel"
                 required
-                placeholder="e.g. REN-STF-108"
+                placeholder="e.g. 08012345678"
                 class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
+              <input
+                v-model="postRegForm.email"
+                type="email"
+                required
+                placeholder="e.g. amina@email.com"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Guest Tier *</label>
+              <select
+                v-model="postRegForm.guestType"
+                class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white"
+              >
+                <option value="On-Site Registered">Non-VIP (Regular / On-Site)</option>
+                <option value="VIP">VIP Guest</option>
+                <option value="Spouse / Plus-One">Spouse / Plus-One</option>
+              </select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Assign Table *</label>
@@ -285,10 +306,40 @@
                 class="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs sm:text-sm transition shadow-md flex items-center justify-center gap-2"
               >
                 <VIcon name="check" size="sm" />
-                <span>Register Guest &amp; Assign Seat</span>
+                <span>Admit Guest &amp; Generate Admission Receipt</span>
               </button>
             </div>
           </form>
+        </div>
+
+        <!-- Admission Receipt Information Mail Confirmation -->
+        <div
+          v-if="lastAdmittedReceipt"
+          class="bg-emerald-500/10 dark:bg-emerald-500/10 border-2 border-emerald-500 rounded-3xl p-5 space-y-3 shadow-md"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-black text-sm">
+              <VIcon name="checkCircle" size="sm" />
+              <span>Admission Receipt Mail Dispatched</span>
+            </div>
+            <button
+              @click="lastAdmittedReceipt = null"
+              type="button"
+              class="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div class="bg-white dark:bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-xs space-y-1.5 font-mono">
+            <div><strong>To:</strong> {{ lastAdmittedReceipt.email || 'Gate Print / Walk-In' }} ({{ lastAdmittedReceipt.phone || 'N/A' }})</div>
+            <div><strong>Subject:</strong> Admitted — Renaissance End of Year Party ({{ lastAdmittedReceipt.ticketId }})</div>
+            <div class="pt-1 text-slate-600 dark:text-slate-300 font-sans">
+              Hello <strong>{{ lastAdmittedReceipt.name }}</strong>, you have been officially admitted by
+              <strong>{{ lastAdmittedReceipt.admittedBy }}</strong> at {{ lastAdmittedReceipt.checkedInAt }}.
+              Your assigned seat is <strong>{{ lastAdmittedReceipt.table }} • {{ lastAdmittedReceipt.seat }}</strong>
+              ({{ lastAdmittedReceipt.isVip ? 'VIP' : lastAdmittedReceipt.type }}).
+            </div>
+          </div>
         </div>
 
         <!-- Recent Gate Check-Ins List -->
@@ -332,10 +383,12 @@
 const router = useRouter()
 const { eventState, userSession, activeGuestContext, performGateAction } = useEventSuite()
 
-// Allow Gate Ushers / Startup Entry and Admins to operate the QR Scanner; Vendors go to Vendor Dashboard
+// Allow Gate Registrars and Admins to operate the QR Scanner
 onMounted(() => {
   if (userSession.value.role === 'vendor') {
     router.replace('/vendor')
+  } else if (userSession.value.role === 'delivery') {
+    router.replace('/delivery')
   }
 })
 
@@ -344,6 +397,7 @@ const highlightPostReg = ref(false)
 const postRegNameInput = ref<HTMLInputElement | null>(null)
 const videoRef = ref<HTMLVideoElement | null>(null)
 const cameraActive = ref(false)
+const lastAdmittedReceipt = ref<any>(null)
 let mediaStream: MediaStream | null = null
 
 const scanResult = reactive({
@@ -359,7 +413,10 @@ const scanResult = reactive({
 
 const postRegForm = reactive({
   name: '',
-  sponsor: 'REN-STF-042',
+  phone: '',
+  email: '',
+  guestType: 'On-Site Registered',
+  sponsor: 'Gate Admission',
   table: 'Table 14',
   seat: 'Seat 6'
 })
@@ -400,7 +457,8 @@ const handleManualCodeLookup = async () => {
   if (!manualTicketInput.value.trim()) return
   const res = await performGateAction({
     action: 'scan_qr',
-    code: manualTicketInput.value.trim()
+    code: manualTicketInput.value.trim(),
+    admittedBy: userSession.value.name || 'Gate Personnel'
   })
   if (res.ok && res.attendee) {
     applyVerifiedAttendee(res.attendee)
@@ -413,7 +471,8 @@ const triggerScanCheck = async (mode: 'valid' | 'walkin') => {
   if (mode === 'valid') {
     const res = await performGateAction({
       action: 'scan_qr',
-      simulateMode: 'valid'
+      simulateMode: 'valid',
+      admittedBy: userSession.value.name || 'Gate Personnel'
     })
     if (res.attendee) {
       applyVerifiedAttendee(res.attendee)
@@ -422,7 +481,7 @@ const triggerScanCheck = async (mode: 'valid' | 'walkin') => {
   } else {
     scanResult.status = 'unregistered'
     scanResult.title = 'Unregistered / Walk-In'
-    scanResult.subtitle = 'Complete On-Site Registration'
+    scanResult.subtitle = 'Complete Manual Admission'
     scanResult.badge = 'WALK-IN / NO QR'
     scanResult.ticketId = 'NEW'
     scanResult.guestName = 'Unregistered Arrival'
@@ -444,6 +503,7 @@ const applyVerifiedAttendee = (att: any) => {
   scanResult.guestName = att.name
   scanResult.tableSeat = `${att.table} • ${att.seat}`
   scanResult.guestType = att.type
+  lastAdmittedReceipt.value = att
 
   activeGuestContext.value = {
     name: att.name,
@@ -458,13 +518,20 @@ const submitPostRegistration = async () => {
   const res = await performGateAction({
     action: 'post_register',
     name: postRegForm.name,
+    phone: postRegForm.phone,
+    email: postRegForm.email,
+    guestType: postRegForm.guestType,
+    isVip: postRegForm.guestType === 'VIP',
     sponsor: postRegForm.sponsor,
     table: postRegForm.table,
-    seat: postRegForm.seat
+    seat: postRegForm.seat,
+    admittedBy: userSession.value.name || 'Gate Personnel'
   })
   if (res.ok && res.attendee) {
     applyVerifiedAttendee(res.attendee)
     postRegForm.name = ''
+    postRegForm.phone = ''
+    postRegForm.email = ''
     highlightPostReg.value = false
   }
 }
@@ -474,6 +541,6 @@ const toggleSeatRelease = async () => {
 }
 
 const proceedGuestToFoodMenu = () => {
-  router.push('/menu')
+  router.push('/Orders')
 }
 </script>

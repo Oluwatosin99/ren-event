@@ -29,44 +29,33 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Staff / Vendor / Admin Login against SQLite `users` table
+  // Staff / Personnel / Vendor / Admin Login against SQLite `users` table
   const email = String(body.email || '').trim().toLowerCase()
   const password = String(body.password || '').trim()
 
-  if (!email) {
-    throw createError({ statusCode: 400, statusMessage: 'Email is required.' })
+  if (!email || !password) {
+    throw createError({ statusCode: 400, statusMessage: 'Email and password are required.' })
   }
 
   const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(email) as any
+  const personnelRoles = ['admin', 'vendor', 'delivery', 'registrar']
 
-  // If user does not exist as admin or vendor, fall back strictly to 'guest' ("just order your food")
-  if (!user || (user.role !== 'admin' && user.role !== 'vendor')) {
-    return {
-      ok: true,
-      role: 'guest' as const,
-      user: {
-        name: user?.name || email.split('@')[0] || 'Event Guest',
-        email,
-        role: 'guest' as const,
-        department: 'Guest Attendee'
-      },
-      fallbackToGuest: true
-    }
+  if (!user || !personnelRoles.includes(user.role)) {
+    throw createError({ statusCode: 401, statusMessage: 'Personnel account not found. Please check your credentials.' })
   }
 
-  // Verify password for admin / vendor
-  if (password && user.password !== password) {
-    throw createError({ statusCode: 401, statusMessage: 'Invalid password for this Admin/Vendor account.' })
+  if (user.password !== password) {
+    throw createError({ statusCode: 401, statusMessage: 'Invalid password for this personnel account.' })
   }
 
   return {
     ok: true,
-    role: user.role as 'admin' | 'vendor',
+    role: user.role as 'admin' | 'vendor' | 'delivery' | 'registrar',
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role as 'admin' | 'vendor',
+      role: user.role as 'admin' | 'vendor' | 'delivery' | 'registrar',
       department: user.department
     },
     state: getFullEventState()

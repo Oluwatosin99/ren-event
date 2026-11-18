@@ -939,6 +939,10 @@
 import type { MenuItem, MenuSubCat } from '~/server/utils/db'
 import { QUICK_FLAVOR_TAGS, SUBCAT_META, SUBCAT_OPTIONS } from '~/utils/menuCatalog'
 
+definePageMeta({
+  alias: ['/orders', '/menu']
+})
+
 const {
   eventState,
   isDark,
