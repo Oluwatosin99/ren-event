@@ -12,7 +12,6 @@
               <VIcon name="utensils" size="xs" />
               <span>Order Your Food</span>
             </span>
-            <span v-if="isStaffOrAdmin" class="text-[11px] font-bold text-orange-600 dark:text-orange-400">Live Plate Availability</span>
           </div>
           <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Renaissance End of Year Party Menu
@@ -316,20 +315,6 @@
                   <VIcon name="ban" size="xs" />
                   <span>SOLD OUT</span>
                 </span>
-                <template v-else-if="isStaffOrAdmin">
-                  <span
-                    v-if="dish.stock <= dish.threshold"
-                    class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px] shadow-lg animate-pulse"
-                  >
-                    Only {{ dish.stock }} left
-                  </span>
-                  <span
-                    v-else
-                    class="px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur text-emerald-400 border border-emerald-500/30 font-extrabold text-[11px] font-mono"
-                  >
-                    {{ dish.stock }} plates
-                  </span>
-                </template>
               </div>
 
               <div class="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2">
@@ -438,20 +423,6 @@
             >
               SOLD OUT
             </span>
-            <template v-else-if="isStaffOrAdmin">
-              <span
-                v-if="dish.stock <= dish.threshold"
-                class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px]"
-              >
-                Only {{ dish.stock }} left
-              </span>
-              <span
-                v-else
-                class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] font-mono"
-              >
-                {{ dish.stock }} plates
-              </span>
-            </template>
           </div>
         </div>
       </div>
@@ -518,13 +489,6 @@
                     class="text-[10px] font-extrabold font-mono text-red-600"
                   >
                     SOLD OUT
-                  </span>
-                  <span
-                    v-else-if="isStaffOrAdmin"
-                    class="text-[10px] font-extrabold font-mono"
-                    :class="dish.stock <= dish.threshold ? 'text-orange-600' : 'text-emerald-600 dark:text-emerald-400'"
-                  >
-                    {{ dish.stock }} plates
                   </span>
                 </div>
               </div>
