@@ -223,10 +223,17 @@ const visibleNavItems = computed(() => {
       show: role === 'admin' || role === 'vendor'
     },
     {
+      to: '/delivery',
+      label: 'Deliveries',
+      shortLabel: 'Deliver',
+      icon: 'checkCircle',
+      show: role === 'admin' || role === 'vendor' || route.path === '/delivery'
+    },
+    {
       to: '/admin',
-      label: 'Admin & DB',
+      label: 'Admin Matrix',
       shortLabel: 'Admin',
-      icon: 'database',
+      icon: 'layers',
       show: role === 'admin'
     }
   ]

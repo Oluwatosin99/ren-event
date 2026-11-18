@@ -81,7 +81,9 @@ export async function fetchEventStateFromSupabase(): Promise<EventState | null> 
       status: r.status || 'unprocessed',
       printCount: Number(r.print_count || 0),
       qrToken: r.qr_token,
-      idempotencyKey: r.idempotency_key || undefined
+      idempotencyKey: r.idempotency_key || undefined,
+      servedBy: r.served_by || undefined,
+      servedAt: r.served_at ? Number(r.served_at) : undefined
     }))
 
     // 3. Fetch attendees

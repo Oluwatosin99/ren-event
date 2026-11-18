@@ -69,6 +69,8 @@ export interface FoodOrder {
   printCount: number
   qrToken: string
   idempotencyKey?: string
+  servedBy?: string
+  servedAt?: number
 }
 
 export interface GuestAttendee {
@@ -241,6 +243,14 @@ function initSchemaAndSeed(db: DatabaseSync) {
   }
 
   // Safe schema migration for existing SQLite databases
+  const orderCols = (db.prepare('PRAGMA table_info(orders)').all() as Array<{ name: string }>).map(c => c.name)
+  if (!orderCols.includes('served_by')) {
+    db.exec(`ALTER TABLE orders ADD COLUMN served_by TEXT NOT NULL DEFAULT ''`)
+  }
+  if (!orderCols.includes('served_at')) {
+    db.exec(`ALTER TABLE orders ADD COLUMN served_at INTEGER DEFAULT NULL`)
+  }
+
   const menuCols = (db.prepare('PRAGMA table_info(menu_items)').all() as Array<{ name: string }>).map(c => c.name)
   if (!menuCols.includes('sub_cat')) {
     db.exec(`ALTER TABLE menu_items ADD COLUMN sub_cat TEXT NOT NULL DEFAULT 'other'`)
@@ -398,7 +408,9 @@ export function getFullEventState(): EventState {
     status: r.status,
     printCount: Number(r.print_count),
     qrToken: r.qr_token,
-    idempotencyKey: r.idempotency_key || undefined
+    idempotencyKey: r.idempotency_key || undefined,
+    servedBy: r.served_by || undefined,
+    servedAt: r.served_at ? Number(r.served_at) : undefined
   }))
 
   const attRows = db.prepare('SELECT * FROM attendees ORDER BY created_at DESC').all() as any[]

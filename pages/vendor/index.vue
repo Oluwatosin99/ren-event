@@ -192,8 +192,8 @@
             class="bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none"
           >
             <option value="ALL" class="bg-white dark:bg-slate-900">All Seats</option>
-            <option v-for="s in 10" :key="s" :value="`Seat ${s}`" class="bg-white dark:bg-slate-900">
-              Seat {{ s }}
+            <option v-for="s in availableSeatsInOrders" :key="s" :value="s" class="bg-white dark:bg-slate-900">
+              {{ s }}
             </option>
           </select>
         </div>
@@ -590,9 +590,32 @@ const statusTabs = computed(() => [
   { label: 'Delivered', value: 'delivered' as const, count: deliveredCount.value }
 ])
 
-const availableTablesInOrders = computed(() => {
+const targetStatusOrders = computed(() => {
   if (!eventState.value) return []
-  const set = new Set(eventState.value.orders.map(o => o.table))
+  if (filterStatus.value === 'all') {
+    return eventState.value.orders
+  }
+  return eventState.value.orders.filter(o => o.status === filterStatus.value)
+})
+
+const availableTablesInOrders = computed(() => {
+  const set = new Set(targetStatusOrders.value.map(o => o.table))
+  return Array.from(set).sort((a, b) => {
+    const na = parseInt(a.replace(/\D/g, ''), 10) || 0
+    const nb = parseInt(b.replace(/\D/g, ''), 10) || 0
+    return na - nb
+  })
+})
+
+const availableSeatsInOrders = computed(() => {
+  let orders = targetStatusOrders.value
+  if (filterTable.value !== 'ALL') {
+    orders = orders.filter(o => o.table === filterTable.value)
+  }
+  const set = new Set(orders.map(o => o.seat))
+  if (set.size === 0) {
+    return Array.from({ length: 10 }, (_, i) => `Seat ${i + 1}`)
+  }
   return Array.from(set).sort((a, b) => {
     const na = parseInt(a.replace(/\D/g, ''), 10) || 0
     const nb = parseInt(b.replace(/\D/g, ''), 10) || 0

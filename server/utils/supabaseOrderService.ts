@@ -49,7 +49,9 @@ export async function submitOrderToSupabase(payload: {
         createdAt: Number(ex.created_at || now),
         status: ex.status || 'unprocessed',
         printCount: Number(ex.print_count || 0),
-        qrToken: ex.qr_token
+        qrToken: ex.qr_token,
+        servedBy: ex.served_by || undefined,
+        servedAt: ex.served_at ? Number(ex.served_at) : undefined
       }
       return {
         ok: false,

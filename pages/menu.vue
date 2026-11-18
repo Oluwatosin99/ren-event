@@ -947,7 +947,8 @@ const {
   lastGuestOrder,
   initGuestOrder,
   clearGuestOrderLock,
-  submitFoodOrder
+  submitFoodOrder,
+  fetchState
 } = useEventSuite()
 
 const isStaffOrAdmin = computed(() => userSession.value.role === 'admin' || userSession.value.role === 'vendor')
@@ -957,9 +958,12 @@ const showConfirmModal = ref(false)
 const devOverrideActive = ref(false)
 const alreadyOrderedNotice = ref('')
 
-// Restore the "already ordered" lock after a page refresh
-onMounted(() => {
+// Restore the "already ordered" lock after a page refresh and ensure menu state is fetched
+onMounted(async () => {
   initGuestOrder()
+  if (!eventState.value || !eventState.value.menuItems || eventState.value.menuItems.length === 0) {
+    await fetchState()
+  }
 })
 
 const orderForm = reactive({
@@ -1007,12 +1011,12 @@ const categoryDishes = computed(() => {
 })
 
 const nigerianDishesCount = computed(() => {
-  if (!eventState.value) return 15
+  if (!eventState.value) return 0
   return eventState.value.menuItems.filter(i => i.cat === 'nigerian').length
 })
 
 const continentalDishesCount = computed(() => {
-  if (!eventState.value) return 16
+  if (!eventState.value) return 0
   return eventState.value.menuItems.filter(i => i.cat === 'continental').length
 })
 

@@ -24,181 +24,243 @@
     </div>
 
     <!-- =================================================================== -->
-    <!-- DUAL PRIMARY STARTUP DECISION: QR SCANNER vs FOOD ORDER             -->
+    <!-- 4 PRIMARY OPERATIONAL ENTRY PORTALS                                 -->
     <!-- =================================================================== -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-      <!-- CHOICE 1: QR GATE SCANNER & CHECK-IN -->
-      <div class="bg-white dark:bg-slate-900 border-2 border-orange-500/60 dark:border-orange-500/50 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between relative overflow-hidden transition-colors">
-        <div class="absolute -right-16 -top-16 w-56 h-56 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 space-y-5">
-          <div class="flex items-center justify-between gap-3">
-            <div class="w-12 h-12 p-2.5 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-              <VIcon name="qr" size="lg" />
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- PORTAL 1: QR GATE SCANNER & REGISTRATION -->
+      <div class="bg-white dark:bg-slate-900 border-2 border-orange-500/50 hover:border-orange-500 rounded-3xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden transition group">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-11 h-11 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+              <VIcon name="qr" size="md" />
             </div>
-            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30">
-              Option 1 • Gate Access
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30">
+              Station 1
             </span>
           </div>
 
           <div>
-            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-              QR Gate Scanner &amp; Check-In
+            <h2 class="text-lg font-black text-slate-900 dark:text-white leading-tight">
+              QR Gate Scanner
             </h2>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-              Scan sponsor-forwarded QR passes with your phone camera, verify Pre-Registered (<strong>"Yes"</strong>) attendees, or assign seats via On-Site Gate Registration when capacity permits.
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Verify QR passes at the entrance, confirm pre-registered guests, and assign table seats.
             </p>
           </div>
 
-          <!-- Scanner Standby Preview + Live Attendance Snapshot -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-4">
-            <div class="w-20 h-20 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0">
-              <img
-                :src="isDark ? '/images/brand/renaissance-placeholder-dark.jpg' : '/images/brand/renaissance-placeholder-light.jpg'"
-                alt="QR Gate Scanner"
-                class="w-full h-full object-cover"
-              />
-            </div>
-            <div class="space-y-1.5 min-w-0">
-              <div class="text-xs font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <VIcon name="camera" size="xs" class="text-orange-500" />
-                <span>Mobile Camera &amp; Ticket ID Lookup</span>
-              </div>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                Instant gate verification &amp; automatic redirect to Food Ordering after check-in.
-              </p>
-              <div v-if="eventState" class="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-400">
-                Checked-In: {{ eventState.capacity.checkedInCount.toLocaleString() }} / {{ eventState.capacity.totalExpected.toLocaleString() }}
-              </div>
-            </div>
+          <div v-if="eventState" class="p-2.5 rounded-xl bg-orange-500/5 dark:bg-slate-950 border border-orange-500/20 text-[11px] font-mono text-orange-700 dark:text-orange-400">
+            Checked-in: <strong>{{ eventState.capacity.checkedInCount.toLocaleString() }}</strong> / {{ eventState.capacity.totalExpected.toLocaleString() }}
           </div>
         </div>
 
-        <div class="relative z-10 mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-            <VIcon name="clock" size="xs" class="text-orange-500" />
-            <span>Check-in Window: <strong>{{ eventState?.capacity.checkInWindow || '2:00 PM – 2:45 PM' }}</strong></span>
-          </div>
-
+        <div class="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
           <NuxtLink
             to="/scanner"
-            class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs sm:text-sm shadow-lg shadow-orange-500/25 transition flex items-center justify-center gap-2"
+            class="w-full py-2.5 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/25 transition flex items-center justify-center gap-1.5"
           >
-            <VIcon name="qr" size="sm" />
-            <span>Open QR Gate Scanner</span>
-            <VIcon name="arrowRight" size="sm" />
+            <span>Open Gate Scanner</span>
+            <VIcon name="arrowRight" size="xs" />
           </NuxtLink>
         </div>
       </div>
 
-      <!-- CHOICE 2: GUEST — ORDER YOUR FOOD -->
-      <div class="bg-white dark:bg-slate-900 border-2 border-emerald-500/60 dark:border-emerald-500/50 rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col justify-between relative overflow-hidden transition-colors">
-        <div class="absolute -right-16 -top-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 space-y-5">
-          <div class="flex items-center justify-between gap-3">
-            <div class="w-12 h-12 p-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-              <VIcon name="utensils" size="lg" />
+      <!-- PORTAL 2: ORDER FOOD ALONE -->
+      <div class="bg-white dark:bg-slate-900 border-2 border-emerald-500/50 hover:border-emerald-500 rounded-3xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden transition group">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <VIcon name="utensils" size="md" />
             </div>
-            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-              Option 2 • Food Menu
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              Station 2
             </span>
           </div>
 
           <div>
-            <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-              Guest — Order Your Food
+            <h2 class="text-lg font-black text-slate-900 dark:text-white leading-tight">
+              Order Food Alone
             </h2>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-              For seated guests who confirmed attendance (<strong>"Yes"</strong>) or received a seat at the gate. Look up your Ticket ID or confirm your Table &amp; Seat below.
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              For seated guests: browse Nigerian &amp; Continental meals, pick proteins &amp; sides, and place your order.
             </p>
           </div>
 
-          <!-- Optional Ticket ID Lookup (from SQLite Attendees DB) -->
-          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <label class="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <VIcon name="ticket" size="xs" class="text-orange-500" />
-                <span>Ticket QR / ID Lookup (Optional)</span>
-              </label>
-              <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">Try: REN-0842</span>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-2">
-              <input
-                v-model="guestTicketLookup"
-                type="text"
-                placeholder="Enter Ticket ID (e.g. REN-0842)"
-                class="w-full min-w-0 sm:flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                @click="handleTicketLookup"
-                type="button"
-                class="w-full sm:w-auto justify-center px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition flex items-center gap-1.5 shrink-0"
-              >
-                <VIcon name="search" size="xs" />
-                <span>Find Seat</span>
-              </button>
-            </div>
-
-            <div v-if="lookupFeedback" class="text-xs font-semibold flex items-center gap-1.5" :class="lookupFound ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'">
-              <VIcon :name="lookupFound ? 'checkCircle' : 'alert'" size="xs" />
-              <span>{{ lookupFeedback }}</span>
-            </div>
-
-            <!-- Guest Name, Table & Seat Selection -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Guest Name</label>
-                <input
-                  v-model="guestEntry.name"
-                  type="text"
-                  placeholder="Enter your name"
-                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Table Number</label>
-                <select
-                  v-model="guestEntry.table"
-                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option v-for="t in 200" :key="t" :value="`Table ${t}`">Table {{ t }}</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Seat Number</label>
-                <select
-                  v-model="guestEntry.seat"
-                  class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option v-for="s in 10" :key="s" :value="`Seat ${s}`">Seat {{ s }}</option>
-                </select>
-              </div>
-            </div>
+          <div class="p-2.5 rounded-xl bg-emerald-500/5 dark:bg-slate-950 border border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+            <VIcon name="checkCircle" size="xs" />
+            <span>{{ isStaffOrAdmin ? `${totalAvailablePlates.toLocaleString()} plates live` : '1 order per seated guest' }}</span>
           </div>
         </div>
 
-        <div class="relative z-10 mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-            <template v-if="userSession.role === 'admin' || userSession.role === 'vendor'">
-              <VIcon name="checkCircle" size="xs" class="text-emerald-600 dark:text-emerald-400" />
-              <span><strong class="text-emerald-700 dark:text-emerald-400">{{ totalAvailablePlates.toLocaleString() }}</strong> plates live now</span>
-            </template>
-            <template v-else>
-              <VIcon name="utensils" size="xs" class="text-emerald-600 dark:text-emerald-400" />
-              <span>Nigerian &amp; Continental Delicacies</span>
-            </template>
+        <div class="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+          <NuxtLink
+            to="/menu"
+            class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/25 transition flex items-center justify-center gap-1.5"
+          >
+            <span>Order Food Menu</span>
+            <VIcon name="arrowRight" size="xs" />
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- PORTAL 3: DELIVERY SERVER SCANNER (DELIVERED GUYS) -->
+      <div class="bg-white dark:bg-slate-900 border-2 border-blue-500/50 hover:border-blue-500 rounded-3xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden transition group">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-11 h-11 rounded-2xl bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <VIcon name="checkCircle" size="md" />
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+              Station 3
+            </span>
           </div>
 
-          <button
-            @click="handleEnterAsGuest"
-            type="button"
-            class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2"
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white leading-tight">
+              Delivery Server Scanner
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Food delivery waitstaff: scan ticket QR or enter Order ID to mark meals delivered with server audit log.
+            </p>
+          </div>
+
+          <div v-if="eventState" class="p-2.5 rounded-xl bg-blue-500/5 dark:bg-slate-950 border border-blue-500/20 text-[11px] font-mono text-blue-700 dark:text-blue-400">
+            Served: <strong>{{ eventState.orders.filter(o => o.status === 'served').length }}</strong> / {{ eventState.orders.length }} orders
+          </div>
+        </div>
+
+        <div class="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+          <NuxtLink
+            to="/delivery"
+            class="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/25 transition flex items-center justify-center gap-1.5"
           >
-            <span>Order Your Food</span>
-            <VIcon name="arrowRight" size="sm" />
-          </button>
+            <span>Open Delivery Station</span>
+            <VIcon name="arrowRight" size="xs" />
+          </NuxtLink>
+        </div>
+      </div>
+
+      <!-- PORTAL 4: ADMIN EXECUTIVE MATRIX -->
+      <div class="bg-white dark:bg-slate-900 border-2 border-purple-500/50 hover:border-purple-500 rounded-3xl p-5 shadow-lg flex flex-col justify-between relative overflow-hidden transition group">
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <VIcon name="layers" size="md" />
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+              Station 4
+            </span>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-black text-slate-900 dark:text-white leading-tight">
+              Admin Entry &amp; Matrix
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+              Live Table × Seat heatmap matrix, Quad performance, Backend Server Summary &amp; system maintenance.
+            </p>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-purple-500/5 dark:bg-slate-950 border border-purple-500/20 text-[11px] text-purple-700 dark:text-purple-400 font-semibold flex items-center gap-1.5">
+            <VIcon name="lock" size="xs" />
+            <span>Strict Admin Maintenance Access</span>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+          <NuxtLink
+            to="/admin"
+            class="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/25 transition flex items-center justify-center gap-1.5"
+          >
+            <span>Open Admin Dashboard</span>
+            <VIcon name="arrowRight" size="xs" />
+          </NuxtLink>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- FAST SEAT LOOKUP & DIRECT FOOD ORDERING CARD                         -->
+    <!-- =================================================================== -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl transition-colors">
+      <div class="max-w-3xl mx-auto space-y-5">
+        <div class="text-center space-y-1.5">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+            <VIcon name="ticket" size="xs" />
+            <span>Fast Guest Seating Lookup</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+            Ready to Order? Confirm Your Table &amp; Seat
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            Look up your assigned seat using your Ticket ID, or pick your Table &amp; Seat directly to jump straight into the menu.
+          </p>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-4">
+          <!-- Ticket ID Lookup -->
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              v-model="guestTicketLookup"
+              type="text"
+              placeholder="Enter Ticket ID (e.g. REN-0842)"
+              class="w-full min-w-0 sm:flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              @click="handleTicketLookup"
+              type="button"
+              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <VIcon name="search" size="xs" />
+              <span>Find My Seat</span>
+            </button>
+          </div>
+
+          <div v-if="lookupFeedback" class="text-xs font-semibold flex items-center gap-1.5" :class="lookupFound ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'">
+            <VIcon :name="lookupFound ? 'checkCircle' : 'alert'" size="xs" />
+            <span>{{ lookupFeedback }}</span>
+          </div>
+
+          <!-- Guest Name, Table & Seat Dropdowns -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Guest Name</label>
+              <input
+                v-model="guestEntry.name"
+                type="text"
+                placeholder="Enter your name"
+                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Table Number</label>
+              <select
+                v-model="guestEntry.table"
+                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option v-for="t in 200" :key="t" :value="`Table ${t}`">Table {{ t }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">Seat Number</label>
+              <select
+                v-model="guestEntry.seat"
+                class="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option v-for="s in 10" :key="s" :value="`Seat ${s}`">Seat {{ s }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button
+              @click="handleEnterAsGuest"
+              type="button"
+              class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2"
+            >
+              <span>Proceed to Food Menu</span>
+              <VIcon name="arrowRight" size="sm" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -309,10 +371,13 @@ const {
   eventState,
   isLoading,
   isDark,
+  userSession,
   enterAsGuest,
   lookupGuestTicket,
   loginWithDb
 } = useEventSuite()
+
+const isStaffOrAdmin = computed(() => userSession.value?.role === 'admin' || userSession.value?.role === 'vendor')
 
 const guestTicketLookup = ref('')
 const lookupFeedback = ref('')
