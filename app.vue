@@ -223,33 +223,14 @@ const visibleNavItems = computed(() => {
     ]
   }
 
-  if (role === 'vendor') {
-    return [
-      {
-        to: '/vendor',
-        label: 'Orders & Print',
-        shortLabel: 'Orders',
-        icon: 'printer',
-        badge: unprocessedOrdersCount.value || undefined
-      },
-      {
-        to: '/vendor/menu',
-        label: 'Menu & Plates',
-        shortLabel: 'Menu',
-        icon: 'upload',
-        badge: undefined
-      }
-    ]
-  }
-
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'vendor') {
     return [
       {
         to: '/admin',
-        label: 'Admin Matrix',
+        label: 'Admin & Kitchen',
         shortLabel: 'Admin',
         icon: 'layers',
-        badge: undefined
+        badge: unprocessedOrdersCount.value || undefined
       },
       {
         to: '/scanner',
@@ -257,13 +238,6 @@ const visibleNavItems = computed(() => {
         shortLabel: 'Gate',
         icon: 'qr',
         badge: undefined
-      },
-      {
-        to: '/vendor',
-        label: 'Kitchen & Menu',
-        shortLabel: 'Kitchen',
-        icon: 'printer',
-        badge: unprocessedOrdersCount.value || undefined
       },
       {
         to: '/delivery',

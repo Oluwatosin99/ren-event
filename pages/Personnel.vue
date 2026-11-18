@@ -118,10 +118,10 @@ const loginError = ref('')
 
 const testAccounts = [
   {
-    title: 'Admin (Full Operations)',
+    title: 'Admin (Full Operations & Kitchen)',
     email: 'admin@renaissance.ng',
     password: 'admin123',
-    desc: 'Order Matrix, Registration Logs, Kitchen & Maintenance',
+    desc: 'Order Matrix, Kitchen Orders, Menu Uploader, Reg Logs & Users',
     icon: 'layers',
     iconClass: 'text-red-600 dark:text-red-400',
     cardClass: 'bg-red-500/5 hover:bg-red-500/10 border-red-500/25'
@@ -136,30 +136,20 @@ const testAccounts = [
     cardClass: 'bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/25'
   },
   {
-    title: 'Delivery Checker (Vendor Agent)',
+    title: 'Delivery Checker',
     email: 'delivery@renaissance.ng',
     password: 'delivery123',
     desc: 'Scan order QR or enter Receipt ID to mark delivered',
     icon: 'checkCircle',
     iconClass: 'text-emerald-600 dark:text-emerald-400',
     cardClass: 'bg-emerald-500/5 hover:bg-emerald-500/10 border-emerald-500/25'
-  },
-  {
-    title: 'Kitchen / Vendor Dispatch',
-    email: 'vendor@renaissance.ng',
-    password: 'vendor123',
-    desc: 'Orders, Receipt Printing & Menu Plate Stock',
-    icon: 'printer',
-    iconClass: 'text-amber-600 dark:text-amber-400',
-    cardClass: 'bg-amber-500/5 hover:bg-amber-500/10 border-amber-500/25'
   }
 ]
 
 const routeByRole = (role: string) => {
-  if (role === 'admin') return '/admin'
+  if (role === 'admin' || role === 'vendor') return '/admin'
   if (role === 'registrar') return '/scanner'
   if (role === 'delivery') return '/delivery'
-  if (role === 'vendor') return '/vendor'
   return '/Orders'
 }
 

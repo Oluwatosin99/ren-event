@@ -72,6 +72,34 @@
       </div>
     </div>
 
+    <!-- Admin Operations Tab Bar -->
+    <div class="flex flex-wrap items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-2xl shadow-sm">
+      <button
+        v-for="tab in adminTabs"
+        :key="tab.id"
+        type="button"
+        @click="adminTab = tab.id"
+        class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5"
+        :class="adminTab === tab.id
+          ? 'bg-emerald-600 text-white shadow'
+          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'"
+      >
+        <VIcon :name="tab.icon" size="xs" />
+        <span>{{ tab.label }}</span>
+        <span
+          v-if="tab.badge !== undefined"
+          class="px-1.5 py-0.2 rounded-full text-[10px] font-black"
+          :class="adminTab === tab.id ? 'bg-yellow-400 text-slate-950' : 'bg-orange-500 text-white'"
+        >
+          {{ tab.badge }}
+        </span>
+      </button>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- TAB 1: ORDER MATRIX & EXECUTIVE KPIS                                -->
+    <!-- =================================================================== -->
+    <template v-if="adminTab === 'matrix'">
     <!-- Executive Row 1: KPI Summary Cards & Amala / Continental Rates -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
       <!-- Left KPI Cards (4 cols) -->
@@ -266,93 +294,255 @@
         </div>
       </div>
     </div>
+    </template>
 
-    <!-- System Telemetry & Strict Admin Maintenance Section -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-md space-y-5 transition-colors">
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-        <div>
-          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30">
-            Strict Admin Maintenance Only
-          </span>
-          <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-1">
-            Platform Security, User Accounts &amp; Concurrency Stress Testing
-          </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">
-            Only verified Tech Admins can manage DB user credentials, execute concurrent burst simulations, or adjust event settings.
-          </p>
-        </div>
-
-        <button
-          @click="handleBurstTest"
-          :disabled="isLoading"
-          type="button"
-          class="px-4 py-2 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
-        >
-          <VIcon name="bolt" size="xs" />
-          <span>{{ isLoading ? 'Simulating...' : 'Simulate +25 Concurrent Orders' }}</span>
-        </button>
-      </div>
-
-      <!-- Create New DB User Form -->
-      <form @submit.prevent="handleCreateUser" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
-          <input
-            v-model="newUser.name"
-            type="text"
-            required
-            placeholder="e.g. Brossa Adewale"
-            class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-          />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email *</label>
-          <input
-            v-model="newUser.email"
-            type="email"
-            required
-            placeholder="user@renaissance.ng"
-            class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono"
-          />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password *</label>
-          <input
-            v-model="newUser.password"
-            type="text"
-            required
-            class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono"
-          />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Role *</label>
-          <select
-            v-model="newUser.role"
-            class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-          >
-            <option value="admin">Admin (Full Access)</option>
-            <option value="registrar">Gate Register / Scanner</option>
-            <option value="delivery">Delivery Checker (Vendor Agent)</option>
-            <option value="vendor">Kitchen Vendor (Orders &amp; Dishes)</option>
-            <option value="guest">Guest (Food Ordering Only)</option>
-          </select>
-        </div>
-        <div>
+    <!-- =================================================================== -->
+    <!-- TAB 2: KITCHEN ORDERS & 80MM RECEIPT DISPATCH                       -->
+    <!-- =================================================================== -->
+    <div v-if="adminTab === 'orders'" class="space-y-5">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
           <button
-            type="submit"
-            :disabled="isLoading"
-            class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition shadow-sm"
+            v-for="tab in kitchenStatusTabs"
+            :key="tab.value"
+            @click="kitchenFilterStatus = tab.value"
+            type="button"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5"
+            :class="kitchenFilterStatus === tab.value
+              ? 'bg-emerald-600 text-white shadow'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'"
           >
-            Create User
+            <span>{{ tab.label }}</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-black" :class="kitchenFilterStatus === tab.value ? 'bg-yellow-400 text-slate-950' : 'bg-slate-200 dark:bg-slate-800'">
+              {{ tab.count }}
+            </span>
           </button>
         </div>
-      </form>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            v-model="kitchenSearch"
+            type="text"
+            placeholder="Search order, guest, dish..."
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+          />
+          <button
+            v-if="unprocessedCount > 0"
+            @click="handleBatchPrintUnprocessed"
+            type="button"
+            class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+          >
+            <VIcon name="printer" size="xs" />
+            <span>Print All {{ unprocessedCount }} Unprocessed</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        <div class="xl:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-950 text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-3 px-4">Order</th>
+                  <th class="py-3 px-4">Guest &amp; Seat</th>
+                  <th class="py-3 px-4">Meal</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                <tr
+                  v-for="order in filteredKitchenOrders"
+                  :key="order.id"
+                  @click="selectedOrderId = order.id"
+                  class="cursor-pointer transition-colors"
+                  :class="selectedOrderId === order.id ? 'bg-emerald-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-950/60'"
+                >
+                  <td class="py-3 px-4 font-mono font-bold text-orange-600 dark:text-orange-400">
+                    <div>{{ order.id }}</div>
+                    <div class="text-[10px] text-slate-400 font-normal">{{ order.time }}</div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <div class="font-bold text-slate-900 dark:text-white">{{ order.guest }}</div>
+                    <div class="text-[11px] text-slate-500">{{ order.table }} • {{ order.seat }}</div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <div class="font-semibold text-slate-900 dark:text-white">{{ order.dish }}</div>
+                    <div class="text-[10px] text-slate-400">{{ [...order.sides, ...order.proteins].join(', ') }}</div>
+                  </td>
+                  <td class="py-3 px-4">
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase"
+                      :class="order.status === 'delivered'
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                        : order.status === 'processed'
+                          ? 'bg-yellow-400/20 text-yellow-800 dark:text-yellow-300'
+                          : 'bg-red-500/15 text-red-700 dark:text-red-400'"
+                    >
+                      {{ order.status }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 text-right">
+                    <button
+                      @click.stop="triggerPhysicalPrint(order.id)"
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white font-bold text-[11px] transition"
+                    >
+                      {{ order.printCount > 0 ? 'Reprint' : 'Print' }}
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="filteredKitchenOrders.length === 0">
+                  <td colspan="5" class="py-10 text-center text-slate-400">No orders match your filter.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 80mm Receipt Preview -->
+        <div class="xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase text-slate-500">XP-80T Thermal Preview</span>
+            <button
+              v-if="activeKitchenOrder"
+              @click="triggerPhysicalPrint(activeKitchenOrder.id)"
+              type="button"
+              class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1"
+            >
+              <VIcon name="printer" size="xs" />
+              <span>Print 80mm</span>
+            </button>
+          </div>
+          <ThermalReceipt80mm v-if="activeKitchenOrder" :order="activeKitchenOrder" />
+          <div v-else class="py-10 text-center text-xs text-slate-400">Select an order to preview receipt.</div>
+        </div>
+      </div>
     </div>
 
     <!-- =================================================================== -->
-    <!-- GATE REGISTRATION LOGS & VIP / NON-VIP ADMISSION TRACKER             -->
+    <!-- TAB 3: MENU UPLOADER & PLATE INVENTORY                              -->
     <!-- =================================================================== -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-6">
+    <div v-if="adminTab === 'menu'" class="space-y-6">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+            Upload New Dish &amp; Set Plate Stock
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Added dishes sync immediately to the Guest Ordering menu (/Orders).
+          </p>
+        </div>
+
+        <form @submit.prevent="handleAddDish" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Dish Name *</label>
+            <input
+              v-model="newDish.name"
+              type="text"
+              required
+              placeholder="e.g. Jambalaya Rice + Garlic Prawns"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Category *</label>
+            <select
+              v-model="newDish.cat"
+              class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+            >
+              <option value="nigerian">Nigerian Dishes</option>
+              <option value="continental">Continental Dishes</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Initial Plates *</label>
+            <input
+              v-model.number="newDish.stock"
+              type="number"
+              min="0"
+              required
+              class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+            <input
+              v-model="newDish.description"
+              type="text"
+              placeholder="Short appetizing note for guests..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Upload Dish Photo</label>
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleDishPhotoUpload"
+              class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-orange-500/15 file:text-orange-700 dark:file:text-orange-300 file:font-bold"
+            />
+          </div>
+          <div>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition shadow-sm"
+            >
+              Add Dish to Menu
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Dish Inventory Grid -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="text-sm font-black text-slate-900 dark:text-white">
+          Live Plate Inventory ({{ eventState?.menuItems.length || 0 }} Dishes)
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div
+            v-for="item in (eventState?.menuItems || [])"
+            :key="item.id"
+            class="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 dark:text-white truncate">{{ item.name }}</div>
+              <div class="text-[10px] text-slate-500 uppercase">{{ item.cat }} • {{ item.subCat }}</div>
+              <div class="text-xs font-mono font-black mt-1" :class="item.stock <= 0 || item.manualClosed ? 'text-red-600' : 'text-emerald-600 dark:text-emerald-400'">
+                {{ item.manualClosed ? 'CLOSED' : `${item.stock} plates` }}
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                @click="adjustDishStock(item.id, -1)"
+                type="button"
+                class="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-xs font-bold"
+              >-1</button>
+              <button
+                @click="adjustDishStock(item.id, 5)"
+                type="button"
+                class="px-2 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold"
+              >+5</button>
+              <button
+                @click="toggleDishClosed(item.id, !item.manualClosed)"
+                type="button"
+                class="px-2 py-1 rounded-lg text-[10px] font-bold"
+                :class="item.manualClosed ? 'bg-orange-500 text-white' : 'bg-red-500/15 text-red-600'"
+              >
+                {{ item.manualClosed ? 'Open' : 'Close' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- TAB 4: GATE REGISTRATION LOGS & VIP / NON-VIP ADMISSION TRACKER     -->
+    <!-- =================================================================== -->
+    <div v-if="adminTab === 'registration'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div>
           <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -497,21 +687,258 @@
         </div>
       </div>
     </div>
+
+    <!-- =================================================================== -->
+    <!-- TAB 5: PERSONNEL USERS DIRECTORY & SYSTEM MAINTENANCE               -->
+    <!-- =================================================================== -->
+    <div v-if="adminTab === 'users'" class="space-y-6">
+      <!-- Users Information Table -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              Personnel Users Directory ({{ personnelUsers.length }})
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              Manage Admin, Gate Register / Scanner, and Delivery Checker accounts
+            </p>
+          </div>
+          <button
+            @click="handleBurstTest"
+            :disabled="isLoading"
+            type="button"
+            class="px-4 py-2 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
+          >
+            <VIcon name="bolt" size="xs" />
+            <span>{{ isLoading ? 'Simulating...' : 'Simulate +25 Concurrent Orders' }}</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-950 text-[11px] font-extrabold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="py-3 px-4">ID</th>
+                <th class="py-3 px-4">Name</th>
+                <th class="py-3 px-4">Email</th>
+                <th class="py-3 px-4">Department</th>
+                <th class="py-3 px-4">Role</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="u in personnelUsers" :key="u.id" class="hover:bg-slate-50/70 dark:hover:bg-slate-950/40">
+                <td class="py-3 px-4 font-mono text-slate-400">#{{ u.id }}</td>
+                <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ u.name }}</td>
+                <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">{{ u.email }}</td>
+                <td class="py-3 px-4 text-slate-500 dark:text-slate-400">{{ u.department }}</td>
+                <td class="py-3 px-4">
+                  <select
+                    :value="u.role"
+                    @change="handleUpdateUserRole(u.id, ($event.target as HTMLSelectElement).value as UserRole)"
+                    class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="registrar">Register / Gate Scanner</option>
+                    <option value="delivery">Delivery Checker</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Create New Personnel User -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="text-sm font-black text-slate-900 dark:text-white">
+          Add New Personnel Account
+        </div>
+        <form @submit.prevent="handleCreateUser" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
+            <input
+              v-model="newUser.name"
+              type="text"
+              required
+              placeholder="e.g. Chinedu Okafor"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Email *</label>
+            <input
+              v-model="newUser.email"
+              type="email"
+              required
+              placeholder="officer@renaissance.ng"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Password *</label>
+            <input
+              v-model="newUser.password"
+              type="text"
+              required
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Role *</label>
+            <select
+              v-model="newUser.role"
+              class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+            >
+              <option value="admin">Admin (Full Access)</option>
+              <option value="registrar">Register / Gate Scanner</option>
+              <option value="delivery">Delivery Checker</option>
+            </select>
+          </div>
+          <div>
+            <button
+              type="submit"
+              :disabled="isLoading"
+              class="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition shadow-sm"
+            >
+              Create User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { UserRole } from '~/server/utils/db'
 
-const { eventState, isLoading, isDark, userSession, manageUsers, simulateConcurrencyBurst } = useEventSuite()
+const {
+  eventState,
+  isLoading,
+  isDark,
+  userSession,
+  manageUsers,
+  updateOrderStatus,
+  updateMenuOrStock,
+  uploadDishImage,
+  simulateConcurrencyBurst
+} = useEventSuite()
 const router = useRouter()
 
-// Guard: Only admins allowed
+// Guard: Only admins (and legacy vendor sessions) allowed
 onMounted(() => {
-  if (userSession.value.role !== 'admin') {
+  if (userSession.value.role !== 'admin' && userSession.value.role !== 'vendor') {
     router.replace('/Personnel')
   }
 })
+
+const adminTab = ref<'matrix' | 'orders' | 'menu' | 'registration' | 'users'>('matrix')
+
+const unprocessedCount = computed(() => {
+  return (eventState.value?.orders || []).filter(o => o.status === 'unprocessed').length
+})
+
+const adminTabs = computed(() => [
+  { id: 'matrix' as const, label: 'Order Matrix & KPIs', icon: 'layers', badge: undefined },
+  { id: 'orders' as const, label: 'Kitchen Orders', icon: 'printer', badge: unprocessedCount.value || undefined },
+  { id: 'menu' as const, label: 'Menu Uploader', icon: 'upload', badge: undefined },
+  { id: 'registration' as const, label: 'Registration Logs', icon: 'qr', badge: undefined },
+  { id: 'users' as const, label: 'Personnel Users', icon: 'users', badge: undefined }
+])
+
+// Kitchen Orders tab state
+const kitchenFilterStatus = ref<'all' | 'unprocessed' | 'processed' | 'delivered'>('all')
+const kitchenSearch = ref('')
+const selectedOrderId = ref<string>('ORD-1114')
+
+const kitchenStatusTabs = computed(() => {
+  const all = eventState.value?.orders || []
+  return [
+    { label: 'All', value: 'all' as const, count: all.length },
+    { label: 'Unprocessed', value: 'unprocessed' as const, count: all.filter(o => o.status === 'unprocessed').length },
+    { label: 'Processed', value: 'processed' as const, count: all.filter(o => o.status === 'processed').length },
+    { label: 'Delivered', value: 'delivered' as const, count: all.filter(o => o.status === 'delivered').length }
+  ]
+})
+
+const filteredKitchenOrders = computed(() => {
+  const q = kitchenSearch.value.trim().toLowerCase()
+  return (eventState.value?.orders || []).filter(o => {
+    if (kitchenFilterStatus.value !== 'all' && o.status !== kitchenFilterStatus.value) return false
+    if (q && !o.guest.toLowerCase().includes(q) && !o.id.toLowerCase().includes(q) && !o.dish.toLowerCase().includes(q)) return false
+    return true
+  })
+})
+
+const activeKitchenOrder = computed(() => {
+  const all = eventState.value?.orders || []
+  if (!all.length) return null
+  return all.find(o => o.id === selectedOrderId.value) || filteredKitchenOrders.value[0] || all[0]
+})
+
+const triggerPhysicalPrint = async (orderId: string) => {
+  selectedOrderId.value = orderId
+  await updateOrderStatus({ orderId, printTicket: true })
+  if (import.meta.client) {
+    setTimeout(() => { window.print() }, 100)
+  }
+}
+
+const handleBatchPrintUnprocessed = async () => {
+  const ids = (eventState.value?.orders || []).filter(o => o.status === 'unprocessed').map(o => o.id)
+  if (!ids.length) return
+  await updateOrderStatus({ action: 'batch_print', orderIds: ids })
+}
+
+// Menu Uploader tab state
+const newDish = reactive({
+  name: '',
+  cat: 'nigerian' as 'nigerian' | 'continental',
+  description: '',
+  stock: 40,
+  image: '/images/dishes/jollof-rice.jpg'
+})
+
+const handleDishPhotoUpload = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  const res = await uploadDishImage(file)
+  if (res.ok && res.url) {
+    newDish.image = res.url
+  }
+}
+
+const handleAddDish = async () => {
+  if (!newDish.name.trim()) return
+  await updateMenuOrStock({
+    action: 'add_dish',
+    name: newDish.name.trim(),
+    cat: newDish.cat,
+    description: newDish.description.trim() || 'Freshly prepared Renaissance dish.',
+    stock: newDish.stock,
+    image: newDish.image
+  })
+  newDish.name = ''
+  newDish.description = ''
+}
+
+const adjustDishStock = async (dishId: string, delta: number) => {
+  await updateMenuOrStock({ action: 'adjust_stock', dishId, delta })
+}
+
+const toggleDishClosed = async (dishId: string, manualClosed: boolean) => {
+  await updateMenuOrStock({ action: 'toggle_closed', dishId, manualClosed })
+}
+
+// Personnel Users tab state
+const personnelUsers = computed(() => {
+  return (eventState.value?.users || []).filter(u => u.role !== 'guest')
+})
+
+const handleUpdateUserRole = async (userId: number, role: UserRole) => {
+  await manageUsers({ action: 'update_role', userId, role })
+}
 
 const vipFilter = ref<'all' | 'vip' | 'non_vip'>('all')
 
@@ -683,8 +1110,8 @@ const quadBreakdown = computed(() => {
 const newUser = reactive({
   name: '',
   email: '',
-  password: 'vendor123',
-  role: 'vendor' as UserRole,
+  password: 'gate123',
+  role: 'registrar' as UserRole,
   department: 'Event Operations'
 })
 
