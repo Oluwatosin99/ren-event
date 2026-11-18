@@ -12,13 +12,13 @@
               <VIcon name="utensils" size="xs" />
               <span>Order Your Food</span>
             </span>
-            <span class="text-[11px] font-bold text-orange-600 dark:text-orange-400">Live Plate Availability</span>
+            <span v-if="isStaffOrAdmin" class="text-[11px] font-bold text-orange-600 dark:text-orange-400">Live Plate Availability</span>
           </div>
           <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
             Renaissance End of Year Party Menu
           </h1>
           <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 leading-relaxed">
-            Confirm your Name, Table, and Seat number below, choose Nigerian or Continental cuisine, and switch between Grid, Form List, or Grouped views. Items at 0 plates automatically mark <strong>SOLD OUT</strong>.
+            Confirm your Name, Table, and Seat number below, choose Nigerian or Continental cuisine, and switch between Grid, Form List, or Grouped views. Items unavailable automatically mark <strong>SOLD OUT</strong>.
           </p>
         </div>
 
@@ -316,18 +316,20 @@
                   <VIcon name="ban" size="xs" />
                   <span>SOLD OUT</span>
                 </span>
-                <span
-                  v-else-if="dish.stock <= dish.threshold"
-                  class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px] shadow-lg animate-pulse"
-                >
-                  Only {{ dish.stock }} left
-                </span>
-                <span
-                  v-else
-                  class="px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur text-emerald-400 border border-emerald-500/30 font-extrabold text-[11px] font-mono"
-                >
-                  {{ dish.stock }} plates
-                </span>
+                <template v-else-if="isStaffOrAdmin">
+                  <span
+                    v-if="dish.stock <= dish.threshold"
+                    class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px] shadow-lg animate-pulse"
+                  >
+                    Only {{ dish.stock }} left
+                  </span>
+                  <span
+                    v-else
+                    class="px-2.5 py-1 rounded-lg bg-slate-950/85 backdrop-blur text-emerald-400 border border-emerald-500/30 font-extrabold text-[11px] font-mono"
+                  >
+                    {{ dish.stock }} plates
+                  </span>
+                </template>
               </div>
 
               <div class="absolute bottom-2 left-3 right-3 flex items-center justify-between gap-2">
@@ -436,18 +438,20 @@
             >
               SOLD OUT
             </span>
-            <span
-              v-else-if="dish.stock <= dish.threshold"
-              class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px]"
-            >
-              Only {{ dish.stock }} left
-            </span>
-            <span
-              v-else
-              class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] font-mono"
-            >
-              {{ dish.stock }} plates
-            </span>
+            <template v-else-if="isStaffOrAdmin">
+              <span
+                v-if="dish.stock <= dish.threshold"
+                class="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-black text-[11px]"
+              >
+                Only {{ dish.stock }} left
+              </span>
+              <span
+                v-else
+                class="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] font-mono"
+              >
+                {{ dish.stock }} plates
+              </span>
+            </template>
           </div>
         </div>
       </div>
@@ -510,10 +514,17 @@
                 <div class="flex items-center justify-between mt-1.5">
                   <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{{ dish.vendor }}</span>
                   <span
-                    class="text-[10px] font-extrabold font-mono"
-                    :class="isDishSoldOut(dish) ? 'text-red-600' : dish.stock <= dish.threshold ? 'text-orange-600' : 'text-emerald-600 dark:text-emerald-400'"
+                    v-if="isDishSoldOut(dish)"
+                    class="text-[10px] font-extrabold font-mono text-red-600"
                   >
-                    {{ isDishSoldOut(dish) ? 'SOLD OUT' : `${dish.stock} plates` }}
+                    SOLD OUT
+                  </span>
+                  <span
+                    v-else-if="isStaffOrAdmin"
+                    class="text-[10px] font-extrabold font-mono"
+                    :class="dish.stock <= dish.threshold ? 'text-orange-600' : 'text-emerald-600 dark:text-emerald-400'"
+                  >
+                    {{ dish.stock }} plates
                   </span>
                 </div>
               </div>
@@ -931,12 +942,15 @@ import { QUICK_FLAVOR_TAGS, SUBCAT_META, SUBCAT_OPTIONS } from '~/utils/menuCata
 const {
   eventState,
   isDark,
+  userSession,
   activeGuestContext,
   lastGuestOrder,
   initGuestOrder,
   clearGuestOrderLock,
   submitFoodOrder
 } = useEventSuite()
+
+const isStaffOrAdmin = computed(() => userSession.value.role === 'admin' || userSession.value.role === 'vendor')
 
 const allowOrderOverride = Boolean(useRuntimeConfig().public.allowOrderOverride)
 const showConfirmModal = ref(false)

@@ -181,8 +181,14 @@
 
         <div class="relative z-10 mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-            <VIcon name="checkCircle" size="xs" class="text-emerald-600 dark:text-emerald-400" />
-            <span><strong class="text-emerald-700 dark:text-emerald-400">{{ totalAvailablePlates.toLocaleString() }}</strong> plates live now</span>
+            <template v-if="userSession.role === 'admin' || userSession.role === 'vendor'">
+              <VIcon name="checkCircle" size="xs" class="text-emerald-600 dark:text-emerald-400" />
+              <span><strong class="text-emerald-700 dark:text-emerald-400">{{ totalAvailablePlates.toLocaleString() }}</strong> plates live now</span>
+            </template>
+            <template v-else>
+              <VIcon name="utensils" size="xs" class="text-emerald-600 dark:text-emerald-400" />
+              <span>Nigerian &amp; Continental Delicacies</span>
+            </template>
           </div>
 
           <button
