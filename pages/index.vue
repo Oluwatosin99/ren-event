@@ -3,9 +3,9 @@
     <div class="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-10 shadow-xl space-y-6 transition-colors">
       <div class="flex justify-center">
         <img
-          :src="isDark ? '/images/brand/renaissance-logo-dark.jpg' : '/images/brand/renaissance-logo-light.jpg'"
-          alt="Renaissance Event"
-          class="w-64 sm:w-72 h-auto object-contain rounded-2xl"
+          :src="isDark ? '/images/svg/rengala-dark.svg' : '/images/svg/rengala-light.svg'"
+          alt="RenGala"
+          class="w-64 sm:w-72 h-auto object-contain"
         />
       </div>
 
@@ -18,7 +18,7 @@
 
       <div class="space-y-2">
         <h1 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-          Renaissance Event Platform
+          RenGala Event Platform
         </h1>
         <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
           Kindly contact support for your respective link.

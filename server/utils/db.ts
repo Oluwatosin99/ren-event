@@ -229,14 +229,40 @@ function initSchemaAndSeed(db: DatabaseSync) {
     INSERT OR IGNORE INTO users (name, email, password, role, department, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `)
-  insertUser.run('Tech Admin (Ikedichi / Linus)', 'admin@renaissance.ng', 'admin123', 'admin', 'Reconstituted Tech Group', nowUserSeed)
-  insertUser.run('Tajudeen (Builders Admin)', 'tajudeen@renaissance.ng', 'admin123', 'admin', 'Platform Engineering', nowUserSeed)
-  insertUser.run('Lagos Royal Kitchens (Vendor)', 'vendor@renaissance.ng', 'vendor123', 'vendor', 'Food Vendor & Kitchen Ops', nowUserSeed)
-  insertUser.run('Catering Focal Point', 'catering@renaissance.ng', 'vendor123', 'vendor', 'Catering & XP-80T Dispatch', nowUserSeed)
-  insertUser.run('Gate Officer — Chinedu', 'gate1@renaissance.ng', 'gate123', 'registrar', 'Gate & Admission', nowUserSeed)
-  insertUser.run('Gate Officer — Zainab', 'gate2@renaissance.ng', 'gate123', 'registrar', 'Gate & Admission', nowUserSeed)
-  insertUser.run('Numbere Tamunoemi (Delivery)', 'delivery@renaissance.ng', 'delivery123', 'delivery', 'Food Delivery Ops', nowUserSeed)
-  insertUser.run('Oluwatosin Dawodu', 'guest@renaissance.ng', 'guest123', 'guest', 'Event Attendee', nowUserSeed)
+  const b64 = (s: string) => Buffer.from(s, 'utf8').toString('base64')
+  insertUser.run('Tech Admin (Ikedichi / Linus)', 'admin@renaissance.ng', b64('admin123'), 'admin', 'Reconstituted Tech Group', nowUserSeed)
+  insertUser.run('Tajudeen (Builders Admin)', 'tajudeen@renaissance.ng', b64('admin123'), 'admin', 'Platform Engineering', nowUserSeed)
+  insertUser.run('Lagos Royal Kitchens (Vendor)', 'vendor@renaissance.ng', b64('vendor123'), 'vendor', 'Food Vendor & Kitchen Ops', nowUserSeed)
+  insertUser.run('Catering Focal Point', 'catering@renaissance.ng', b64('vendor123'), 'vendor', 'Catering & XP-80T Dispatch', nowUserSeed)
+  insertUser.run('Kitchen Printer Station 1', 'kitchen1@renaissance.ng', b64('vendor123'), 'vendor', 'Receipt Printing Station 1', nowUserSeed)
+  insertUser.run('Kitchen Printer Station 2', 'kitchen2@renaissance.ng', b64('vendor123'), 'vendor', 'Receipt Printing Station 2', nowUserSeed)
+  insertUser.run('Gate Officer — Chinedu', 'gate1@renaissance.ng', b64('gate123'), 'registrar', 'Gate & Admission', nowUserSeed)
+  insertUser.run('Gate Officer — Zainab', 'gate2@renaissance.ng', b64('gate123'), 'registrar', 'Gate & Admission', nowUserSeed)
+  insertUser.run('Numbere Tamunoemi', 'delivery@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('Maduabuchi Ogu', 'maduabuchi@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('UI-SCiN-Sampling-Agent', 'sampling@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('UI-SCiN-Nadrr-Server', 'nadrr@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('Taiwo Balogun', 'taiwo@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('Chiamaka Okonjo', 'chiamaka@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('General Food Server', 'server@renaissance.ng', b64('delivery123'), 'delivery', 'Food Delivery Ops', nowUserSeed)
+  insertUser.run('Oluwatosin Dawodu', 'guest@renaissance.ng', b64('guest123'), 'guest', 'Event Attendee', nowUserSeed)
+
+  // One-time safe migration: encode any legacy plaintext passwords into Base64
+  const b64Migrated = db.prepare("SELECT value FROM event_settings WHERE key = 'passwords_b64_migrated'").get() as { value: string } | undefined
+  if (!b64Migrated || b64Migrated.value !== '1') {
+    const existingUsers = db.prepare('SELECT id, password FROM users').all() as Array<{ id: number; password: string }>
+    const knownPlain = new Set(['admin123', 'vendor123', 'gate123', 'delivery123', 'guest123', 'renaissance123'])
+    const updPw = db.prepare('UPDATE users SET password = ? WHERE id = ?')
+    for (const u of existingUsers) {
+      const pw = String(u.password || '')
+      // Encode if it's a known plaintext or not valid base64-roundtrip
+      const looksBase64 = pw.length >= 4 && pw.length % 4 === 0 && /^[A-Za-z0-9+/]+={0,2}$/.test(pw)
+      if (knownPlain.has(pw) || !looksBase64) {
+        updPw.run(b64(pw), u.id)
+      }
+    }
+    db.prepare("INSERT OR REPLACE INTO event_settings (key, value) VALUES ('passwords_b64_migrated', '1')").run()
+  }
 
   // Seed settings if empty
   const settingsCount = (db.prepare('SELECT COUNT(*) as cnt FROM event_settings').get() as { cnt: number }).cnt
@@ -467,7 +493,16 @@ export function getFullEventState(): EventState {
     isVip: Boolean(r.is_vip) || r.guest_type === 'VIP'
   }))
 
-  const userRows = db.prepare('SELECT id, name, email, role, department, created_at FROM users ORDER BY id ASC').all() as any[]
+  const rawUserRows = db.prepare('SELECT id, name, email, password, role, department, created_at FROM users ORDER BY id ASC').all() as any[]
+  const userRows = rawUserRows.map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    passwordBase64: String(u.password || ''),
+    role: u.role,
+    department: u.department,
+    created_at: u.created_at
+  }))
 
   return {
     capacity: {

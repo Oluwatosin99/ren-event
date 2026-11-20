@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 240" width="340" height="240" fill="none">
+  <defs>
+    <linearGradient id="dishBgL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ECFDF5" />
+      <stop offset="50%" stop-color="#FFFBEB" />
+      <stop offset="100%" stop-color="#FFF7ED" />
+    </linearGradient>
+    <linearGradient id="dishBlendL" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#02B702" />
+      <stop offset="35%" stop-color="#FFD400" />
+      <stop offset="70%" stop-color="#FF6F00" />
+      <stop offset="100%" stop-color="#FF0000" />
+    </linearGradient>
+    <linearGradient id="domeBlendL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#02B702" />
+      <stop offset="40%" stop-color="#10B981" />
+      <stop offset="75%" stop-color="#FFD400" />
+      <stop offset="100%" stop-color="#FF6F00" />
+    </linearGradient>
+    <pattern id="dishDiamondsL" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M12 3 L21 12 L12 21 L3 12 Z" stroke="#059669" stroke-opacity="0.06" stroke-width="1" fill="none" />
+    </pattern>
+  </defs>
+
+  <rect width="340" height="240" rx="22" fill="url(#dishBgL)" />
+  <rect width="340" height="240" rx="22" fill="url(#dishDiamondsL)" />
+  <rect x="0" y="0" width="340" height="5" fill="url(#dishBlendL)" />
+
+  <!-- Central Gala Cloche with Bowtie + African Embroidery Band (Zero QR Brackets) -->
+  <g transform="translate(106, 26)">
+    <rect x="0" y="0" width="128" height="128" rx="34" fill="#FFFFFF" stroke="url(#dishBlendL)" stroke-width="2.5" />
+    <rect x="8" y="8" width="112" height="112" rx="27" fill="#F8FAFC" />
+
+    <!-- Top Gala Starbursts -->
+    <path d="M64 16 L66 21 L71 23 L66 25 L64 30 L62 25 L57 23 L62 21 Z" fill="url(#dishBlendL)" />
+    <path d="M32 31 L33.2 34 L36 35.2 L33.2 36.4 L32 39.5 L30.8 36.4 L28 35.2 L30.8 34 Z" fill="#10B981" />
+    <path d="M96 31 L97.2 34 L100 35.2 L97.2 36.4 L96 39.5 L94.8 36.4 L92 35.2 L94.8 34 Z" fill="#FF6F00" />
+
+    <!-- Serving Cloche Dome in Smooth Blended Gradient -->
+    <circle cx="64" cy="36" r="4.2" fill="#FFD400" stroke="#FF6F00" stroke-width="1.8" />
+    <path d="M28 70 C28 51.2 44.1 38 64 38 C83.9 38 100 51.2 100 70 Z" fill="url(#domeBlendL)" fill-opacity="0.16" stroke="url(#dishBlendL)" stroke-width="3.2" stroke-linejoin="round" />
+
+    <!-- African Agbada Geometric Diamond Band Across Cloche Rim -->
+    <path d="M33 65 L40 59 L47 65 L54 59 L61 65 L68 59 L75 65 L82 59 L89 65 L95 60" stroke="url(#dishBlendL)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Platter Base -->
+    <line x1="22" y1="75" x2="106" y2="75" stroke="#0F172A" stroke-width="3.5" stroke-linecap="round" />
+
+    <!-- Subtle Black-Tie Bowtie Accent Below Platter -->
+    <path d="M51 86 L62 91.5 L51 97 Z" fill="#02B702" />
+    <path d="M77 86 L66 91.5 L77 97 Z" fill="#FF6F00" />
+    <circle cx="64" cy="91.5" r="2.6" fill="#FFD400" />
+  </g>
+
+  <rect x="68" y="166" width="204" height="28" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2" />
+  <circle cx="85" cy="180" r="3.5" fill="#02B702" />
+  <circle cx="95" cy="180" r="3.5" fill="#FFD400" />
+  <circle cx="105" cy="180" r="3.5" fill="#FF6F00" />
+  <text x="117" y="184" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" font-weight="900" letter-spacing="0.8" fill="#0F172A">RENGALA • BANQUET</text>
+
+  <text x="170" y="213" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10.5" font-weight="700" letter-spacing="0.4" fill="#64748B">Renaissance End of Year Event</text>
+</svg>

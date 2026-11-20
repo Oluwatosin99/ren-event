@@ -1,21 +1,13 @@
-import { getDb, getFullEventState } from '../utils/db'
+import { getMysqlPool, getFullEventStateFromMysql, getQuadForTable } from '../utils/mysql'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const db = getDb()
-
-  const { getSupabase } = await import('../utils/supabase')
-  const sb = getSupabase()
+  const pool = getMysqlPool()
 
   if (body.action === 'update_layout') {
     // Safety Check: Ensure all orders are cleared before changing table/seat layout
-    let activeOrderCount = 0
-    if (sb) {
-      const { count } = await sb.from('orders').select('*', { count: 'exact', head: true })
-      activeOrderCount = count || 0
-    } else {
-      activeOrderCount = (db.prepare('SELECT COUNT(*) as cnt FROM orders').get() as { cnt: number }).cnt
-    }
+    const [countRows] = await pool.query<any[]>('SELECT COUNT(*) as cnt FROM orders')
+    const activeOrderCount = Number(countRows?.[0]?.cnt || 0)
 
     if (activeOrderCount > 0) {
       throw createError({
@@ -28,6 +20,8 @@ export default defineEventHandler(async (event) => {
     let seatsPerTable = Math.max(1, Math.min(30, Number(body.seatsPerTable) || 10))
     let totalExpected = totalTables * seatsPerTable
     let layoutJson = ''
+
+    const tableRowsToCreate: Array<{ tableNo: number; seats: number }> = []
 
     if (Array.isArray(body.customTables) && body.customTables.length > 0) {
       const clean = body.customTables
@@ -43,6 +37,11 @@ export default defineEventHandler(async (event) => {
         seatsPerTable = Math.max(...clean.map((t: any) => t.seats))
         totalExpected = clean.reduce((sum: number, t: any) => sum + t.seats, 0)
         layoutJson = JSON.stringify(clean)
+        tableRowsToCreate.push(...clean)
+      }
+    } else {
+      for (let t = 1; t <= totalTables; t++) {
+        tableRowsToCreate.push({ tableNo: t, seats: seatsPerTable })
       }
     }
 
@@ -53,24 +52,37 @@ export default defineEventHandler(async (event) => {
       ['table_layout_json', layoutJson]
     ]
 
-    if (sb) {
-      for (const [key, value] of pairs) {
-        await sb.from('event_settings').upsert({ key, value }, { onConflict: 'key' })
+    for (const [k, v] of pairs) {
+      await pool.execute(
+        `INSERT INTO event_settings (setting_key, setting_value)
+         VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+        [k, v]
+      )
+    }
+
+    // Rebuild `table_seating` table to match the new layout
+    await pool.execute('DELETE FROM table_seating')
+    const batchValues: any[] = []
+    for (const row of tableRowsToCreate) {
+      const quad = getQuadForTable(row.tableNo)
+      for (let s = 1; s <= row.seats; s++) {
+        batchValues.push([quad, row.tableNo, s, `Table ${row.tableNo}`, `Seat ${s}`, null, 'empty'])
       }
     }
 
-    const setStmt = db.prepare('INSERT OR REPLACE INTO event_settings (key, value) VALUES (?, ?)')
-    for (const [key, value] of pairs) {
-      setStmt.run(key, value)
+    // Insert in chunks of 500 for fast execution on Hostinger MySQL
+    const chunkSize = 500
+    for (let i = 0; i < batchValues.length; i += chunkSize) {
+      const chunk = batchValues.slice(i, i + chunkSize)
+      const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ')
+      await pool.execute(
+        `INSERT INTO table_seating (quad, table_number, seat_number, table_label, seat_label, order_id, seat_status) VALUES ${placeholders}`,
+        chunk.flat()
+      )
     }
 
-    if (sb) {
-      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
-      const state = await fetchEventStateFromSupabase()
-      if (state) return { ok: true, state }
-    }
-
-    return { ok: true, state: getFullEventState() }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   throw createError({ statusCode: 400, statusMessage: 'Invalid table layout action' })

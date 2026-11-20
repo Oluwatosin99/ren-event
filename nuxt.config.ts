@@ -4,8 +4,11 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
-    supabaseUrl: process.env.SUPABASE_URL || '',
-    supabaseKey: process.env.SUPABASE_KEY || '',
+    mysqlHost: process.env.MYSQL_HOST || '127.0.0.1',
+    mysqlPort: Number(process.env.MYSQL_PORT || 3306),
+    mysqlUser: process.env.MYSQL_USER || 'u930027423_RenGala',
+    mysqlPassword: process.env.MYSQL_PASSWORD || '',
+    mysqlDatabase: process.env.MYSQL_DATABASE || 'u930027423_Ren_Event',
     public: {
       // DEV MODE: shows "Override & Order Again" on the Thank You screen.
       // Set NUXT_PUBLIC_ALLOW_ORDER_OVERRIDE=false (or change to false) before go-live.
@@ -38,15 +41,15 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Renaissance Event Platform — Access, Food Menu & Operations',
+      title: 'RenGala — End of Year Event Platform',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0' },
-        { name: 'description', content: 'Renaissance End of Year Event Platform: Gate QR Scanner, Guest Mobile Food App, Vendor Kitchen Dashboard & 80mm Thermal Printing.' },
+        { name: 'description', content: 'RenGala End of Year Event Platform: Gate QR Scanner, Guest Mobile Food App, Vendor Kitchen Dashboard & 80mm Thermal Printing.' },
         { name: 'theme-color', content: '#008751' }
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/images/brand/logo-mark-light.svg' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/images/svg/rengala-mark-light.svg' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {

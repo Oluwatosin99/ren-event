@@ -34,7 +34,7 @@
             </div>
           </div>
           <h1 class="text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-2.5">
-            End of Year Party Meal Order Dashboard
+            RenGala Meal Order Dashboard
           </h1>
           <div class="text-xs text-slate-600 dark:text-slate-300 font-mono mt-2 flex items-center gap-2">
             <span class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-white shadow-sm">
@@ -205,30 +205,63 @@
         </div>
       </div>
 
-      <!-- Right Backend Summary (Servers / Dispatchers Breakdown) (4 cols) -->
-      <div class="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+      <!-- Right Backend Summary (Delivery Personnel Breakdown — 3 Separate Bars per Server) (4 cols) -->
+      <div class="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="space-y-2 pb-2.5 border-b border-slate-200 dark:border-slate-800">
           <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Backend Summary</h2>
-          <div class="flex items-center gap-2 text-[10px] font-bold">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Received</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>Printed</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Served</span>
+          <div class="flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Orders Received</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400"></span>Orders Printed</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Orders Served</span>
           </div>
         </div>
 
-        <!-- Server Performance Rows -->
-        <div class="space-y-3.5">
-          <div v-for="server in serverPerformance" :key="server.name" class="space-y-1">
-            <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-              <span class="truncate max-w-[160px]">{{ server.name }}</span>
-              <span class="font-mono text-[11px] text-slate-500">{{ server.served }} / {{ server.received }}</span>
+        <!-- Server Performance Rows (3 Distinct Horizontal Bars matching PowerBI layout) -->
+        <div class="space-y-4 max-h-[260px] overflow-y-auto pr-1">
+          <div
+            v-for="server in serverPerformance"
+            :key="server.name"
+            class="grid grid-cols-12 items-center gap-2.5"
+          >
+            <div class="col-span-4 text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate text-right" :title="server.name">
+              {{ server.name }}
             </div>
-            <!-- Tri-color Progress Bar Stack -->
-            <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800 flex overflow-hidden">
-              <div class="bg-red-500 h-full" :style="{ width: `${server.receivedPct}%` }"></div>
-              <div class="bg-yellow-400 h-full" :style="{ width: `${server.printedPct}%` }"></div>
-              <div class="bg-emerald-500 h-full" :style="{ width: `${server.servedPct}%` }"></div>
+            <div class="col-span-8 space-y-1">
+              <!-- Bar 1: Orders Received (Red) -->
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800/70 rounded-r-md overflow-hidden">
+                  <div
+                    class="h-full bg-red-500 rounded-r-md transition-all duration-500"
+                    :style="{ width: `${server.receivedPct}%` }"
+                  ></div>
+                </div>
+                <span class="w-7 text-right font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">{{ server.received }}</span>
+              </div>
+              <!-- Bar 2: Orders Printed (Yellow) -->
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800/70 rounded-r-md overflow-hidden">
+                  <div
+                    class="h-full bg-yellow-400 rounded-r-md transition-all duration-500"
+                    :style="{ width: `${server.printedPct}%` }"
+                  ></div>
+                </div>
+                <span class="w-7 text-right font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">{{ server.printed }}</span>
+              </div>
+              <!-- Bar 3: Orders Served (Green) -->
+              <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-2.5 bg-slate-100 dark:bg-slate-800/70 rounded-r-md overflow-hidden">
+                  <div
+                    class="h-full bg-emerald-500 rounded-r-md transition-all duration-500"
+                    :style="{ width: `${server.servedPct}%` }"
+                  ></div>
+                </div>
+                <span class="w-7 text-right font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{{ server.served }}</span>
+              </div>
             </div>
+          </div>
+
+          <div v-if="serverPerformance.length === 0" class="py-8 text-center text-xs text-slate-400">
+            No delivery scanner personnel found.
           </div>
         </div>
       </div>
@@ -296,31 +329,44 @@
         </div>
       </div>
 
-      <!-- Quad Performance Breakdown Chart (4 cols) -->
-      <div class="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+      <!-- Quad Performance Breakdown Vertical Bar Chart (4 cols — 100% Real DB Data) -->
+      <div class="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+        <div class="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-slate-800">
           <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Quad Performance</h2>
-          <div class="flex items-center gap-2 text-[10px] font-bold">
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span>Received</span>
-            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Served</span>
+          <div class="flex items-center gap-2.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Received</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Served</span>
           </div>
         </div>
 
-        <div class="space-y-4 pt-2">
-          <div v-for="quad in quadBreakdown" :key="quad.label" class="space-y-1">
-            <div class="flex items-center justify-between text-xs font-bold">
-              <span class="text-slate-900 dark:text-white">Quad {{ quad.label }} (Tables {{ quad.range }})</span>
-              <span class="font-mono text-slate-500">{{ quad.served }} / {{ quad.received }}</span>
-            </div>
-            <!-- Dual Bar: Received vs Served -->
-            <div class="space-y-1">
-              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-red-500 h-full rounded-full transition-all" :style="{ width: `${quad.receivedPct}%` }"></div>
+        <!-- Vertical Grouped Columns: A, B, C, D -->
+        <div class="flex-1 flex items-end justify-around gap-3 pt-6 pb-2 min-h-[220px] border-b border-slate-200 dark:border-slate-800">
+          <div v-for="quad in quadBreakdown" :key="quad.label" class="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <div class="w-full flex items-end justify-center gap-1.5 h-44">
+              <!-- Received Bar (Red) -->
+              <div class="flex flex-col items-center justify-end h-full w-6 sm:w-7">
+                <span class="font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300 mb-1">{{ quad.received }}</span>
+                <div
+                  class="w-full bg-red-500 rounded-t-md transition-all duration-500"
+                  :style="{ height: quad.received > 0 ? `${Math.max(6, quad.receivedPct)}%` : '2px', opacity: quad.received > 0 ? 1 : 0.25 }"
+                ></div>
               </div>
-              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-emerald-500 h-full rounded-full transition-all" :style="{ width: `${quad.servedPct}%` }"></div>
+              <!-- Served Bar (Green) -->
+              <div class="flex flex-col items-center justify-end h-full w-6 sm:w-7">
+                <span class="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-1">{{ quad.served }}</span>
+                <div
+                  class="w-full bg-emerald-500 rounded-t-md transition-all duration-500"
+                  :style="{ height: quad.served > 0 ? `${Math.max(6, quad.servedPct)}%` : '2px', opacity: quad.served > 0 ? 1 : 0.25 }"
+                ></div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-4 gap-2 text-center">
+          <div v-for="quad in quadBreakdown" :key="`lbl-${quad.label}`">
+            <div class="text-xs font-black text-slate-900 dark:text-white">{{ quad.label }}</div>
+            <div class="text-[10px] text-slate-400">T{{ quad.range }}</div>
           </div>
         </div>
       </div>
@@ -510,6 +556,7 @@
                 <th class="py-3 px-4">ID</th>
                 <th class="py-3 px-4">Name</th>
                 <th class="py-3 px-4">Email</th>
+                <th class="py-3 px-4">Password (Base64)</th>
                 <th class="py-3 px-4">Department</th>
                 <th class="py-3 px-4">Role</th>
                 <th class="py-3 px-4 text-right">Actions</th>
@@ -520,6 +567,24 @@
                 <td class="py-3 px-4 font-mono text-slate-400">#{{ u.id }}</td>
                 <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ u.name }}</td>
                 <td class="py-3 px-4 font-mono text-slate-600 dark:text-slate-300">{{ u.email }}</td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-1.5">
+                    <code class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-[11px] text-slate-800 dark:text-slate-200 max-w-[140px] truncate">
+                      {{ revealedUserPasswords[u.id] ? decodeBase64Password(u.passwordBase64) : (u.passwordBase64 || '—') }}
+                    </code>
+                    <button
+                      v-if="u.passwordBase64"
+                      type="button"
+                      @click="toggleRevealUserPassword(u.id)"
+                      class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition shrink-0"
+                      :class="revealedUserPasswords[u.id]
+                        ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
+                        : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'"
+                    >
+                      {{ revealedUserPasswords[u.id] ? 'Hide' : 'Decode' }}
+                    </button>
+                  </div>
+                </td>
                 <td class="py-3 px-4 text-slate-500 dark:text-slate-400">{{ u.department }}</td>
                 <td class="py-3 px-4">
                   <select
@@ -528,6 +593,7 @@
                     class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
                   >
                     <option value="admin">Admin</option>
+                    <option value="vendor">Vendor / Receipt Printer</option>
                     <option value="registrar">Register / Gate Scanner</option>
                     <option value="delivery">Delivery Checker</option>
                   </select>
@@ -638,6 +704,7 @@
               class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
             >
               <option value="admin">Admin (Full Access)</option>
+              <option value="vendor">Vendor / Receipt Printer</option>
               <option value="registrar">Register / Gate Scanner</option>
               <option value="delivery">Delivery Checker</option>
             </select>
@@ -864,13 +931,33 @@
                 class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="admin">Admin</option>
+                <option value="vendor">Vendor / Receipt Printer</option>
                 <option value="registrar">Register / Gate Scanner</option>
                 <option value="delivery">Delivery Checker</option>
               </select>
             </div>
 
+            <div v-if="selectedUserModal?.passwordBase64" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">Stored Password (Base64)</span>
+                <button
+                  type="button"
+                  @click="toggleRevealUserPassword(selectedUserModal.id)"
+                  class="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition"
+                  :class="revealedUserPasswords[selectedUserModal.id]
+                    ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
+                    : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'"
+                >
+                  {{ revealedUserPasswords[selectedUserModal.id] ? 'Hide Decoded' : 'Decode Base64' }}
+                </button>
+              </div>
+              <div class="font-mono text-xs font-bold text-slate-900 dark:text-white break-all">
+                {{ revealedUserPasswords[selectedUserModal.id] ? decodeBase64Password(selectedUserModal.passwordBase64) : selectedUserModal.passwordBase64 }}
+              </div>
+            </div>
+
             <div>
-              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">New Password (optional)</label>
+              <label class="block text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">New Password (optional — saved as Base64)</label>
               <input
                 v-model="editUserForm.password"
                 type="text"
@@ -916,6 +1003,24 @@ const {
 } = useEventSuite()
 const router = useRouter()
 const selectedUserModal = ref<any>(null)
+const revealedUserPasswords = reactive<Record<number, boolean>>({})
+
+const decodeBase64Password = (b64: string | undefined) => {
+  if (!b64) return '—'
+  try {
+    return decodeURIComponent(escape(atob(b64)))
+  } catch {
+    try {
+      return atob(b64)
+    } catch {
+      return b64
+    }
+  }
+}
+
+const toggleRevealUserPassword = (userId: number) => {
+  revealedUserPasswords[userId] = !revealedUserPasswords[userId]
+}
 const editUserForm = reactive({
   name: '',
   email: '',
@@ -960,7 +1065,11 @@ let clockTimer: ReturnType<typeof setInterval> | null = null
 
 // Guard: Only admins (and legacy vendor sessions) allowed
 onMounted(() => {
-  if (userSession.value.role !== 'admin' && userSession.value.role !== 'vendor') {
+  if (userSession.value.role === 'vendor') {
+    router.replace('/vendor')
+    return
+  }
+  if (userSession.value.role !== 'admin') {
     router.replace('/Personnel')
   }
   clockTimer = setInterval(() => {
@@ -1146,13 +1255,13 @@ const otherDishCount = computed(() => {
 })
 
 const amalaOrderRate = computed(() => {
-  if (!totalOrdersCount.value) return '14.0'
+  if (!totalOrdersCount.value) return '0.0'
   const amalaCount = allOrders.value.filter(o => o.dish.toLowerCase().includes('amala')).length
   return ((amalaCount / totalOrdersCount.value) * 100).toFixed(1)
 })
 
 const continentalOrderRate = computed(() => {
-  if (!totalOrdersCount.value) return '71.3'
+  if (!totalOrdersCount.value) return '0.0'
   const contCount = allOrders.value.filter(o => o.category === 'Continental Dishes').length
   return ((contCount / totalOrdersCount.value) * 100).toFixed(1)
 })
@@ -1231,36 +1340,77 @@ const getSeatTooltip = (tableNum: number, seatNum: number) => {
   return `Table ${tableNum} • Seat ${seatNum}: ${ord.guest} (${ord.dish}) [${ord.status.toUpperCase()}]`
 }
 
-// Backend summary dispatcher performance
+// Backend Summary: 100% Real Data from Delivery Personnel (`users` with role='delivery') & live `orders`
 const serverPerformance = computed(() => {
-  const baseServers = [
-    { name: 'Numbere Tamunoemi', received: 270, printed: 270, served: 206 },
-    { name: 'UI-SCiN-Nadrr-Server', received: 237, printed: 237, served: 190 },
-    { name: 'UI-SCiN-Sampling-Agent', received: 232, printed: 232, served: 189 },
-    { name: 'Taiwo Balogun', received: 201, printed: 201, served: 167 },
-    { name: 'Maduabuchi Ogu', received: 117, printed: 117, served: 113 }
-  ]
+  const cleanName = (n: string) => String(n || '').replace(/\s*\(Delivery\)\s*$/i, '').trim()
+  const serverNames = new Set<string>()
 
-  const maxVal = Math.max(...baseServers.map(s => s.received), 1)
-  return baseServers.map(s => ({
-    name: s.name,
-    received: s.received,
-    printed: s.printed,
-    served: s.served,
-    receivedPct: ((s.received / maxVal) * 100).toFixed(0),
-    printedPct: (((s.printed - s.served) / maxVal) * 100).toFixed(0),
-    servedPct: ((s.served / maxVal) * 100).toFixed(0)
+  // Include all registered delivery personnel from MySQL `users`
+  for (const u of eventState.value?.users || []) {
+    if (u.role === 'delivery' && u.name) {
+      serverNames.add(cleanName(u.name))
+    }
+  }
+  // Include any other person who has actually scanned/served an order
+  for (const o of allOrders.value) {
+    if (o.servedBy) {
+      serverNames.add(cleanName(o.servedBy))
+    }
+  }
+
+  const rows = Array.from(serverNames).map((name) => {
+    const targetLower = name.toLowerCase()
+    const matched = allOrders.value.filter((o) => {
+      if (!o.servedBy) return false
+      const s = cleanName(o.servedBy).toLowerCase()
+      return s === targetLower || s.includes(targetLower) || targetLower.includes(s)
+    })
+
+    const received = matched.length
+    const printed = matched.filter(o => Number(o.printCount || 0) > 0 || o.status === 'processed' || o.status === 'delivered').length
+    const served = matched.filter(o => o.status === 'delivered').length
+
+    return { name, received, printed, served }
+  })
+
+  rows.sort((a, b) => (b.served - a.served) || (b.received - a.received) || a.name.localeCompare(b.name))
+
+  const maxVal = Math.max(...rows.map(r => Math.max(r.received, r.printed, r.served)), 1)
+  return rows.map(s => ({
+    ...s,
+    receivedPct: s.received > 0 ? Math.max(4, Math.round((s.received / maxVal) * 100)) : 0,
+    printedPct: s.printed > 0 ? Math.max(4, Math.round((s.printed / maxVal) * 100)) : 0,
+    servedPct: s.served > 0 ? Math.max(4, Math.round((s.served / maxVal) * 100)) : 0
   }))
 })
 
-// Quad Breakdown
+// Quad Breakdown: 100% Real Data computed from live `orders` across Quads A, B, C, D
 const quadBreakdown = computed(() => {
-  return [
-    { label: 'A', range: '1–50', received: 321, served: 261, receivedPct: 100, servedPct: 81 },
-    { label: 'B', range: '51–100', received: 180, served: 149, receivedPct: 56, servedPct: 46 },
-    { label: 'C', range: '101–150', received: 331, served: 259, receivedPct: 100, servedPct: 78 },
-    { label: 'D', range: '151–200', received: 219, served: 196, receivedPct: 68, servedPct: 61 }
+  const quads = [
+    { label: 'A', range: '1–50', min: 1, max: 50, received: 0, served: 0 },
+    { label: 'B', range: '51–100', min: 51, max: 100, received: 0, served: 0 },
+    { label: 'C', range: '101–150', min: 101, max: 150, received: 0, served: 0 },
+    { label: 'D', range: '151–200', min: 151, max: 9999, received: 0, served: 0 }
   ]
+
+  for (const o of allOrders.value) {
+    const tNum = parseInt(String(o.table || '').replace(/\D/g, ''), 10)
+    if (isNaN(tNum)) continue
+    const q = quads.find(x => tNum >= x.min && tNum <= x.max)
+    if (!q) continue
+    q.received++
+    if (o.status === 'delivered') q.served++
+  }
+
+  const maxVal = Math.max(...quads.map(q => Math.max(q.received, q.served)), 1)
+  return quads.map(q => ({
+    label: q.label,
+    range: q.range,
+    received: q.received,
+    served: q.served,
+    receivedPct: q.received > 0 ? Math.round((q.received / maxVal) * 100) : 0,
+    servedPct: q.served > 0 ? Math.round((q.served / maxVal) * 100) : 0
+  }))
 })
 
 const newUser = reactive({

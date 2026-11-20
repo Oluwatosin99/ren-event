@@ -22,43 +22,22 @@ export async function submitOrderToSupabase(payload: {
   const now = Date.now()
   const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  // 1. One meal per seat check (unless devOverride is active)
-  if (!payload.devOverride) {
-    const { data: existingSeat } = await sb
-      .from('orders')
-      .select('*')
-      .eq('table_no', cleanTable)
-      .eq('seat_no', cleanSeat)
-      .order('created_at', { ascending: false })
-      .limit(1)
+  const tPad = String(Math.max(1, parseInt(shortT, 10) || 1)).padStart(2, '0')
+  const sPad = String(Math.max(1, parseInt(shortS, 10) || 1)).padStart(2, '0')
+  const orderId = `REN-ORD-${tPad}${sPad}`
 
-    if (existingSeat && existingSeat.length > 0) {
-      const ex = existingSeat[0]
-      const orderObj: FoodOrder = {
-        id: ex.id,
-        guest: ex.guest_name,
-        ticketId: ex.ticket_id || undefined,
-        table: ex.table_no,
-        seat: ex.seat_no,
-        category: ex.category,
-        dishId: ex.dish_id,
-        dish: ex.dish_name,
-        sides: typeof ex.sides_json === 'string' ? JSON.parse(ex.sides_json || '[]') : ex.sides_json,
-        proteins: typeof ex.proteins_json === 'string' ? JSON.parse(ex.proteins_json || '[]') : ex.proteins_json,
-        time: ex.time_label || 'Just now',
-        createdAt: Number(ex.created_at || now),
-        status: ex.status || 'unprocessed',
-        printCount: Number(ex.print_count || 0),
-        qrToken: ex.qr_token,
-        servedBy: ex.served_by || undefined,
-        servedAt: ex.served_at ? Number(ex.served_at) : undefined
-      }
-      return {
-        ok: false,
-        alreadyOrdered: true,
-        order: orderObj,
-        error: `A meal has already been ordered for ${cleanTable} • ${cleanSeat}.`
-      }
+  // 1. Strictly one meal per Table + Seat (never allow duplicate seat orders or -2 suffixes)
+  const { data: existingSeat } = await sb
+    .from('orders')
+    .select('id, table_no, seat_no')
+    .or(`and(table_no.eq.${cleanTable},seat_no.eq.${cleanSeat}),id.eq.${orderId}`)
+    .limit(1)
+
+  if (existingSeat && existingSeat.length > 0) {
+    return {
+      ok: false,
+      alreadyOrdered: true,
+      error: `Someone has already ordered with these credentials (${cleanTable} • ${cleanSeat}). Kindly cross-check your Table Number and Seat Number and try again. Thank you, and enjoy the event!`
     }
   }
 
@@ -87,11 +66,8 @@ export async function submitOrderToSupabase(payload: {
     .update({ stock: Math.max(0, Number(dish.stock) - 1), updated_at: now })
     .eq('id', dish.id)
 
-  // 4. Generate Order ID
-  const { count } = await sb.from('orders').select('*', { count: 'exact', head: true })
-  const orderNum = 1115 + (count || 0)
-  const orderId = `ORD-${orderNum}`
-  const qrToken = `REN-${orderId}-T${shortT}S${shortS}`
+  // 4. Attach QR token directly to the Table+Seat Order ID
+  const qrToken = orderId
   const cleanSides = payload.sides.length ? payload.sides.slice(0, 2) : ['None']
   const cleanProteins = payload.proteins.length ? payload.proteins.slice(0, 2) : ['None']
   const categoryLabel = dish.cat === 'nigerian' ? 'Nigerian Dishes' : 'Continental Dishes'

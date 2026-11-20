@@ -21,22 +21,73 @@
         </div>
       </div>
 
-      <!-- Server Identity Badge -->
+      <!-- Server Identity Badge (Admin sees All/Per-Person selector; Delivery Personnel sees their own logged-in name) -->
       <div class="w-full sm:w-auto bg-slate-100 dark:bg-slate-950 px-3.5 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between sm:justify-start gap-2.5">
-        <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Server:</div>
+        <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          {{ isAdmin ? 'View Server:' : 'Logged-In Server:' }}
+        </div>
         <select
-          v-model="activeServerName"
+          v-if="isAdmin"
+          v-model="adminServerFilter"
           class="bg-transparent text-xs font-black text-slate-900 dark:text-white focus:outline-none cursor-pointer"
         >
+          <option value="ALL" class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+            All Servers
+          </option>
           <option v-for="s in serverRoster" :key="s" :value="s" class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
             {{ s }}
           </option>
         </select>
+        <span v-else class="text-xs font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>{{ effectiveServerName }}</span>
+        </span>
       </div>
     </div>
 
-    <!-- Quick Stats for Server -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <!-- Floating Glass Notification Toast for "Marked as Served" -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="opacity-0 -translate-y-3 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 -translate-y-2 scale-95"
+    >
+      <div
+        v-if="servedToast"
+        class="fixed top-20 inset-x-4 sm:inset-x-auto sm:right-6 sm:w-96 z-50 p-[1.5px] rounded-2xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-orange-500 shadow-2xl"
+      >
+        <div class="relative overflow-hidden rounded-[14.5px] bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl px-4 py-3.5 flex items-start gap-3">
+          <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-yellow-400/5 to-orange-500/10 pointer-events-none"></div>
+          <div class="relative z-10 w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <VIcon name="checkCircle" size="sm" />
+          </div>
+          <div class="relative z-10 flex-1 min-w-0">
+            <div class="text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Marked as Served
+            </div>
+            <div class="text-sm font-black text-slate-900 dark:text-white truncate mt-0.5">
+              {{ servedToast.guest }} <span class="font-mono text-xs text-slate-500 dark:text-slate-400">({{ servedToast.orderId }})</span>
+            </div>
+            <div class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+              {{ servedToast.tableSeat }} • Confirmed by {{ servedToast.serverName }}
+            </div>
+          </div>
+          <button
+            @click="servedToast = null"
+            type="button"
+            class="relative z-10 text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs font-black p-1"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Quick Stats: Admin sees all 4 KPIs; Delivery Personnel sees only My Scans Today -->
+    <div v-if="isAdmin" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
         <div class="text-xs text-slate-500 dark:text-slate-400">Total Served</div>
         <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
@@ -46,11 +97,15 @@
       </div>
 
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-        <div class="text-xs text-slate-500 dark:text-slate-400">My Scans Today</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">
+          {{ adminServerFilter === 'ALL' ? 'All Server Scans' : 'Server Scans' }}
+        </div>
         <div class="text-2xl font-black text-orange-500 font-mono mt-0.5">
           {{ myServedCount }}
         </div>
-        <div class="text-[11px] text-slate-400">By {{ activeServerName.split(' ')[0] }}</div>
+        <div class="text-[11px] text-slate-400 truncate">
+          {{ adminServerFilter === 'ALL' ? 'Combined Team' : `By ${selectedServerLabel.split(' ')[0]}` }}
+        </div>
       </div>
 
       <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
@@ -67,6 +122,16 @@
           {{ completionRate }}%
         </div>
         <div class="text-[11px] text-slate-400">Served vs Received</div>
+      </div>
+    </div>
+
+    <div v-else class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
+      <div>
+        <div class="text-xs font-bold text-slate-500 dark:text-slate-400">My Scans Today</div>
+        <div class="text-[11px] text-slate-400 mt-0.5">Delivered meals confirmed by {{ effectiveServerName }}</div>
+      </div>
+      <div class="text-3xl font-black text-orange-500 font-mono">
+        {{ myServedCount }}
       </div>
     </div>
 
@@ -93,10 +158,10 @@
 
       <!-- Optional Live Camera Preview -->
       <div v-if="cameraActive" class="rounded-2xl overflow-hidden bg-slate-950 border-2 border-orange-500/60 relative h-52 flex items-center justify-center">
-        <video ref="videoRef" autoplay playsinline class="w-full h-full object-cover"></video>
+        <video ref="videoRef" autoplay playsinline muted class="w-full h-full object-cover"></video>
         <div class="absolute inset-0 pointer-events-none border-2 border-emerald-400/70 m-6 rounded-xl"></div>
-        <div class="absolute bottom-2 left-3 right-3 text-center text-[11px] font-bold text-white bg-slate-950/75 px-3 py-1 rounded-lg">
-          Point camera at guest meal receipt QR code or enter ID below
+        <div class="absolute bottom-2 left-3 right-3 text-center text-[11px] font-bold text-emerald-300 bg-slate-950/80 px-3 py-1 rounded-lg">
+          Auto-scanning meal receipt QR code… hold steady
         </div>
       </div>
 
@@ -148,36 +213,83 @@
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
-          <h2 class="text-base font-extrabold text-slate-900 dark:text-white">Live Delivery Stream &amp; Audit Log</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Search by Guest Name, Order ID, Table, or Server</p>
+          <h2 class="text-base font-extrabold text-slate-900 dark:text-white">
+            {{ isAdmin ? 'Live Delivery Stream & Audit Log' : filterOnlyMine ? 'My Delivered Scans Today' : 'All Orders' }}
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            {{ isAdmin ? 'Search by Guest Name, Order ID, Table, or Server' : 'Orders you have scanned and confirmed as delivered' }}
+          </p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <div class="relative">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:flex-initial">
             <input
               v-model="logFilterQuery"
               type="text"
               placeholder="Filter by name / table..."
-              class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white w-48 focus:outline-none focus:border-emerald-500"
+              class="pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white w-full sm:w-48 focus:outline-none focus:border-emerald-500"
             />
             <VIcon name="search" size="xs" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
 
           <button
+            v-if="!isAdmin"
             @click="filterOnlyMine = !filterOnlyMine"
             type="button"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition shrink-0"
             :class="filterOnlyMine
               ? 'bg-emerald-600 text-white border-emerald-600'
               : 'bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'"
           >
-            My Scans Only
+            {{ filterOnlyMine ? 'My Delivered Scans' : 'All Orders' }}
           </button>
         </div>
       </div>
 
-      <!-- Orders Table -->
-      <div class="overflow-x-auto">
+      <!-- Mobile Compact List View (Order ID, Name, Status + Eye Icon -> Details Modal) -->
+      <div class="md:hidden space-y-2.5">
+        <div
+          v-for="ord in filteredDeliveryOrders"
+          :key="`mob-${ord.id}`"
+          class="flex items-center justify-between gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-black text-xs text-slate-900 dark:text-white">{{ ord.id }}</span>
+              <span
+                class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase shrink-0"
+                :class="ord.status === 'delivered'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                  : ord.status === 'processed'
+                  ? 'bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border border-yellow-500/30'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30'"
+              >
+                {{ ord.status === 'delivered' ? 'Served' : ord.status === 'processed' ? 'Printed' : 'Ordered' }}
+              </span>
+            </div>
+            <div class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate mt-1">
+              {{ ord.guest }}
+            </div>
+          </div>
+
+          <button
+            @click="selectedOrderModal = ord"
+            type="button"
+            class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-500 hover:text-emerald-600 transition shrink-0 shadow-sm"
+            aria-label="View order details"
+            title="View full order details"
+          >
+            <VIcon name="eye" size="sm" />
+          </button>
+        </div>
+
+        <div v-if="filteredDeliveryOrders.length === 0" class="py-8 text-center text-xs text-slate-400">
+          No orders match your filter.
+        </div>
+      </div>
+
+      <!-- Desktop Orders Table -->
+      <div class="hidden md:block overflow-x-auto">
         <table class="w-full text-left text-xs">
           <thead>
             <tr class="border-b border-slate-200 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 uppercase">
@@ -254,10 +366,97 @@
         </table>
       </div>
     </div>
+
+    <!-- Full Order Details Modal (Mobile Eye Icon) -->
+    <div
+      v-if="selectedOrderModal"
+      @click.self="selectedOrderModal = null"
+      class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-black text-base text-slate-900 dark:text-white">{{ selectedOrderModal.id }}</span>
+              <span
+                class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase"
+                :class="selectedOrderModal.status === 'delivered'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                  : selectedOrderModal.status === 'processed'
+                  ? 'bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border border-yellow-500/30'
+                  : 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30'"
+              >
+                {{ selectedOrderModal.status === 'delivered' ? 'Served' : selectedOrderModal.status === 'processed' ? 'Printed / Ready' : 'Ordered' }}
+              </span>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Placed at {{ selectedOrderModal.time }}</div>
+          </div>
+          <button
+            @click="selectedOrderModal = null"
+            type="button"
+            class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white text-sm font-black"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5">
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Guest Name</span>
+              <span class="font-black text-slate-900 dark:text-white text-right">{{ selectedOrderModal.guest }}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Table &amp; Seat</span>
+              <span class="font-black text-emerald-600 dark:text-emerald-400 text-right">{{ selectedOrderModal.table }} • {{ selectedOrderModal.seat }}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Main Dish</span>
+              <span class="font-bold text-slate-900 dark:text-white text-right">{{ selectedOrderModal.dish }}</span>
+            </div>
+            <div v-if="(selectedOrderModal.sides || []).length" class="flex justify-between gap-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Sides</span>
+              <span class="font-semibold text-slate-700 dark:text-slate-300 text-right">{{ selectedOrderModal.sides.join(', ') }}</span>
+            </div>
+            <div v-if="(selectedOrderModal.proteins || []).length" class="flex justify-between gap-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Proteins</span>
+              <span class="font-semibold text-slate-700 dark:text-slate-300 text-right">{{ selectedOrderModal.proteins.join(', ') }}</span>
+            </div>
+            <div class="flex justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold">Served By</span>
+              <span class="font-bold text-slate-900 dark:text-white text-right">
+                {{ selectedOrderModal.servedBy || 'Not served yet' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button
+            v-if="selectedOrderModal.status !== 'delivered'"
+            @click="quickDeliverFromModal(selectedOrderModal.id)"
+            type="button"
+            class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-md"
+          >
+            Mark as Served
+          </button>
+          <button
+            @click="selectedOrderModal = null"
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition"
+            :class="selectedOrderModal.status === 'delivered' ? 'w-full' : ''"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import jsQR from 'jsqr'
+
 const { eventState, userSession, updateOrderStatus } = useEventSuite()
 
 const scanInput = ref('')
@@ -268,9 +467,27 @@ let mediaStream: MediaStream | null = null
 const isScanning = ref(false)
 const scanFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 const logFilterQuery = ref('')
-const filterOnlyMine = ref(false)
+const filterOnlyMine = ref(true)
+const selectedOrderModal = ref<any>(null)
+const servedToast = ref<{ orderId: string; guest: string; tableSeat: string; serverName: string } | null>(null)
+let servedToastTimer: ReturnType<typeof setTimeout> | null = null
 
-const serverRoster = [
+const triggerServedToast = (order: any) => {
+  if (servedToastTimer) clearTimeout(servedToastTimer)
+  servedToast.value = {
+    orderId: order.id,
+    guest: order.guest,
+    tableSeat: `${order.table} • ${order.seat}`,
+    serverName: effectiveServerName.value
+  }
+  servedToastTimer = setTimeout(() => {
+    servedToast.value = null
+  }, 4000)
+}
+
+const isAdmin = computed(() => userSession.value?.role === 'admin')
+
+const defaultServerRoster = [
   'Numbere Tamunoemi',
   'Maduabuchi Ogu',
   'UI-SCiN-Sampling-Agent',
@@ -280,37 +497,119 @@ const serverRoster = [
   'General Food Server'
 ]
 
-const activeServerName = ref('Numbere Tamunoemi')
+const serverRoster = computed(() => {
+  const dbDeliveryUsers = (eventState.value?.users || [])
+    .filter((u: any) => u.role === 'delivery')
+    .map((u: any) => String(u.name || '').replace(/\s*\(Delivery\)\s*$/i, '').trim())
+    .filter(Boolean)
+  return Array.from(new Set([...dbDeliveryUsers, ...defaultServerRoster]))
+})
+
+const adminServerFilter = ref('ALL')
+
+// Clean display name for the logged-in delivery server (or selected server for Admin)
+const effectiveServerName = computed(() => {
+  const rawName = String(userSession.value?.name || '').replace(/\s*\(Delivery\)\s*$/i, '').trim()
+  if (isAdmin.value) {
+    return adminServerFilter.value !== 'ALL' ? adminServerFilter.value : (rawName || 'Admin')
+  }
+  return rawName || 'Food Server'
+})
+
+const selectedServerLabel = computed(() => {
+  if (isAdmin.value) {
+    return adminServerFilter.value === 'ALL' ? 'All Servers' : adminServerFilter.value
+  }
+  return effectiveServerName.value
+})
+
+const matchesServerName = (servedBy: string | undefined, targetName: string) => {
+  if (!servedBy || !targetName) return false
+  const a = servedBy.replace(/\s*\(Delivery\)\s*$/i, '').trim().toLowerCase()
+  const b = targetName.replace(/\s*\(Delivery\)\s*$/i, '').trim().toLowerCase()
+  return a === b || a.includes(b) || b.includes(a)
+}
 
 onMounted(() => {
-  if (userSession.value?.loggedIn && userSession.value.name) {
-    const matched = serverRoster.find(s => userSession.value.name.toLowerCase().includes(s.toLowerCase().split(' ')[0]))
-    if (matched) activeServerName.value = matched
+  // No localStorage override for non-admin servers; their logged-in identity is authoritative
+})
+
+let scanRafId: number | null = null
+let scanCanvas: HTMLCanvasElement | null = null
+let scanCtx: CanvasRenderingContext2D | null = null
+let lastFrameCheck = 0
+let lastDecodedValue = ''
+let lastDecodedTime = 0
+
+const stopDeliveryCamera = () => {
+  if (scanRafId !== null) {
+    cancelAnimationFrame(scanRafId)
+    scanRafId = null
   }
-  if (import.meta.client) {
-    const saved = localStorage.getItem('ren-server-name')
-    if (saved && serverRoster.includes(saved)) {
-      activeServerName.value = saved
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop())
+    mediaStream = null
+  }
+  cameraActive.value = false
+}
+
+const runDeliveryQrLoop = (timestamp: number) => {
+  if (!cameraActive.value) return
+  scanRafId = requestAnimationFrame(runDeliveryQrLoop)
+
+  if (timestamp - lastFrameCheck < 140 || isScanning.value) return
+  lastFrameCheck = timestamp
+
+  const video = videoRef.value
+  if (!video || video.readyState < video.HAVE_ENOUGH_DATA || !video.videoWidth || !video.videoHeight) {
+    return
+  }
+
+  if (!scanCanvas) {
+    scanCanvas = document.createElement('canvas')
+    scanCtx = scanCanvas.getContext('2d', { willReadFrequently: true })
+  }
+  if (!scanCtx) return
+
+  if (scanCanvas.width !== video.videoWidth || scanCanvas.height !== video.videoHeight) {
+    scanCanvas.width = video.videoWidth
+    scanCanvas.height = video.videoHeight
+  }
+
+  scanCtx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height)
+  const imageData = scanCtx.getImageData(0, 0, scanCanvas.width, scanCanvas.height)
+  const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'attemptBoth'
+  })
+
+  if (decoded?.data) {
+    const raw = decoded.data.trim()
+    const now = Date.now()
+    if (raw && (raw !== lastDecodedValue || now - lastDecodedTime > 2500)) {
+      lastDecodedValue = raw
+      lastDecodedTime = now
+      if (navigator.vibrate) navigator.vibrate(100)
+      scanInput.value = raw
+      handleScanSubmit()
     }
   }
-})
+}
 
 const toggleCameraScanner = async () => {
   if (cameraActive.value) {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(t => t.stop())
-      mediaStream = null
-    }
-    cameraActive.value = false
+    stopDeliveryCamera()
     return
   }
   if (import.meta.client && navigator.mediaDevices?.getUserMedia) {
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
       cameraActive.value = true
-      nextTick(() => {
-        if (videoRef.value) videoRef.value.srcObject = mediaStream
-      })
+      await nextTick()
+      if (videoRef.value) {
+        videoRef.value.srcObject = mediaStream
+        await videoRef.value.play().catch(() => {})
+      }
+      scanRafId = requestAnimationFrame(runDeliveryQrLoop)
     } catch {
       scanFeedback.value = { type: 'error', message: 'Camera permission unavailable. Enter Order or Receipt ID manually below.' }
     }
@@ -318,16 +617,7 @@ const toggleCameraScanner = async () => {
 }
 
 onUnmounted(() => {
-  if (mediaStream) {
-    mediaStream.getTracks().forEach(t => t.stop())
-    mediaStream = null
-  }
-})
-
-watch(activeServerName, (n) => {
-  if (import.meta.client) {
-    localStorage.setItem('ren-server-name', n)
-  }
+  stopDeliveryCamera()
 })
 
 const allOrders = computed(() => eventState.value?.orders || [])
@@ -337,7 +627,11 @@ const totalServedCount = computed(() => {
 })
 
 const myServedCount = computed(() => {
-  return allOrders.value.filter(o => o.status === 'delivered' && o.servedBy === activeServerName.value).length
+  if (isAdmin.value && adminServerFilter.value === 'ALL') {
+    return totalServedCount.value
+  }
+  const target = isAdmin.value ? adminServerFilter.value : effectiveServerName.value
+  return allOrders.value.filter(o => o.status === 'delivered' && matchesServerName(o.servedBy, target)).length
 })
 
 const pendingServedCount = computed(() => {
@@ -352,7 +646,13 @@ const completionRate = computed(() => {
 const filteredDeliveryOrders = computed(() => {
   const q = logFilterQuery.value.trim().toLowerCase()
   return allOrders.value.filter(o => {
-    if (filterOnlyMine.value && o.servedBy !== activeServerName.value) return false
+    if (isAdmin.value) {
+      if (adminServerFilter.value !== 'ALL' && !matchesServerName(o.servedBy, adminServerFilter.value)) {
+        return false
+      }
+    } else if (filterOnlyMine.value && (o.status !== 'delivered' || !matchesServerName(o.servedBy, effectiveServerName.value))) {
+      return false
+    }
     if (!q) return true
     return (
       o.id.toLowerCase().includes(q) ||
@@ -376,13 +676,14 @@ const handleScanSubmit = async () => {
     const res = await updateOrderStatus({
       action: 'scan_delivery',
       query: token,
-      serverName: activeServerName.value
+      serverName: effectiveServerName.value
     })
 
     if (res.ok && res.order) {
+      triggerServedToast(res.order)
       scanFeedback.value = {
         type: 'success',
-        message: `Order ${res.order.id} for ${res.order.guest} (${res.order.table} • ${res.order.seat}) successfully marked as Served by ${activeServerName.value}!`
+        message: `Order ${res.order.id} for ${res.order.guest} (${res.order.table} • ${res.order.seat}) successfully marked as Served by ${effectiveServerName.value}!`
       }
       scanInput.value = ''
     }
@@ -401,13 +702,21 @@ const handleScanSubmit = async () => {
 
 const quickDeliver = async (orderId: string) => {
   try {
-    await updateOrderStatus({
+    const res = await updateOrderStatus({
       action: 'scan_delivery',
       query: orderId,
-      serverName: activeServerName.value
+      serverName: effectiveServerName.value
     })
+    if (res?.ok && res?.order) {
+      triggerServedToast(res.order)
+    }
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Failed to update order status')
   }
+}
+
+const quickDeliverFromModal = async (orderId: string) => {
+  await quickDeliver(orderId)
+  selectedOrderModal.value = null
 }
 </script>

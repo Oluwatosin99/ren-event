@@ -40,6 +40,7 @@
         </form>
 
         <NuxtLink
+          v-if="userSession?.role === 'admin'"
           to="/vendor/menu"
           class="px-3.5 py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm"
         >
@@ -432,13 +433,13 @@
             <div class="text-center border-b-2 border-dashed border-slate-400 pb-2.5">
               <div class="flex justify-center mb-1.5">
                 <img
-                  src="/images/brand/renaissance-logo-light.jpg"
-                  alt="Renaissance"
-                  class="h-10 w-auto object-contain rounded"
+                  src="/images/svg/placeholder-bw-light.svg"
+                  alt="RenGala"
+                  class="h-12 w-auto object-contain"
                 />
               </div>
-              <div class="font-black text-sm tracking-tight leading-tight">RENAISSANCE</div>
-              <div class="text-[10px] font-bold text-slate-600 uppercase">End of Year Party • Kitchen Slip</div>
+              <div class="font-black text-sm tracking-tight leading-tight">RENGALA</div>
+              <div class="text-[10px] font-bold text-slate-600 uppercase">End of Year Event • Kitchen Slip</div>
 
               <div class="mt-2 bg-slate-950 text-white py-2 px-3 rounded-lg border-2 border-slate-900">
                 <div class="text-[9px] uppercase tracking-widest text-yellow-400 font-bold">Table &amp; Seat</div>
@@ -495,26 +496,9 @@
                 Scan QR Upon Table Delivery
               </div>
               <div class="p-2 bg-white border-2 border-slate-900 rounded-lg">
-                <svg class="w-20 h-20 text-slate-950" viewBox="0 0 100 100" fill="currentColor">
-                  <rect x="8" y="8" width="26" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="15" y="15" width="12" height="12"/>
-                  <rect x="66" y="8" width="26" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="73" y="15" width="12" height="12"/>
-                  <rect x="8" y="66" width="26" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="15" y="73" width="12" height="12"/>
-                  <rect x="42" y="12" width="10" height="10"/>
-                  <rect x="42" y="28" width="8" height="16"/>
-                  <rect x="12" y="44" width="16" height="8"/>
-                  <rect x="36" y="44" width="24" height="8"/>
-                  <rect x="44" y="56" width="10" height="16"/>
-                  <rect x="64" y="44" width="12" height="10"/>
-                  <rect x="80" y="44" width="12" height="18"/>
-                  <rect x="58" y="68" width="16" height="8"/>
-                  <rect x="42" y="80" width="22" height="12"/>
-                  <rect x="74" y="76" width="18" height="16"/>
-                </svg>
+                <QrCode :value="activeOrder.qrToken || activeOrder.id" :size="112" />
               </div>
-              <div class="text-[10px] font-bold text-slate-700 mt-1">{{ activeOrder.qrToken }}</div>
+              <div class="text-[10px] font-bold text-slate-700 mt-1">{{ activeOrder.qrToken || activeOrder.id }}</div>
               <div class="mt-2 px-2.5 py-0.5 rounded bg-slate-900 text-white font-extrabold text-[10px] uppercase">
                 STATUS: {{ activeOrder.status.toUpperCase() }}
               </div>

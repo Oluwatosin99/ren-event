@@ -1,15 +1,23 @@
-import { getDb, getFullEventState, inferSubCat, type MenuSubCat } from '../utils/db'
+import { getMysqlPool, getFullEventStateFromMysql } from '../utils/mysql'
+import type { MenuSubCat } from '../utils/db'
 
 const VALID_SUBCATS: MenuSubCat[] = ['rice', 'swallow', 'noodles', 'protein', 'sauce', 'other']
 
-function normalizeSubCat(raw: unknown, name: string): MenuSubCat {
-  const s = String(raw || '').toLowerCase() as MenuSubCat
-  return VALID_SUBCATS.includes(s) ? s : inferSubCat(name)
+function normalizeSubCat(raw: unknown): MenuSubCat {
+  const s = String(raw || '').trim().toLowerCase()
+  if (!s || s === 'none' || s === 'general' || s === 'other') return 'other'
+  if (VALID_SUBCATS.includes(s as MenuSubCat)) return s as MenuSubCat
+  if (s.includes('rice')) return 'rice'
+  if (s.includes('swallow') || s.includes('soup')) return 'swallow'
+  if (s.includes('noodle') || s.includes('pasta')) return 'noodles'
+  if (s.includes('protein') || s.includes('grill') || s.includes('meat') || s.includes('fish') || s.includes('chicken')) return 'protein'
+  if (s.includes('sauce') || s.includes('curry') || s.includes('stew')) return 'sauce'
+  return 'other'
 }
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const db = getDb()
+  const pool = getMysqlPool()
   const now = Date.now()
 
   if (body.action === 'add_dish') {
@@ -17,72 +25,61 @@ export default defineEventHandler(async (event) => {
     if (!name) {
       throw createError({ statusCode: 400, statusMessage: 'Dish name is required' })
     }
-    const cat = body.cat === 'continental' ? 'continental' : 'nigerian'
-    const subCat = normalizeSubCat(body.subCat, name)
+    const category = body.cat === 'continental' ? 'continental' : 'nigerian'
+    const subCategory = normalizeSubCat(body.subCat)
     const imageMode = body.imageMode === 'placeholder' ? 'placeholder' : 'photo'
-    const stock = Math.max(0, parseInt(String(body.stock), 10) || 100)
+    const plates = Math.max(0, parseInt(String(body.stock), 10) || 100)
     const threshold = Math.max(1, parseInt(String(body.threshold), 10) || 10)
-    const vendor = String(body.vendor || 'Renaissance Caterer').trim()
+    const vendor = String(body.vendor || 'RenGala Caterer').trim()
     const description = String(body.description || 'Freshly prepared event delicacy with rich accompaniments.').trim()
-    const defaultImg = cat === 'nigerian'
+    const defaultImg = category === 'nigerian'
       ? '/images/menu/jollof-rice.jpg'
       : '/images/menu/oriental-prawns.jpg'
+    const imageUrl = String(body.image || '').trim() || defaultImg
     const id = `dish_${now}`
 
-    db.prepare(`
-      INSERT INTO menu_items (id, cat, sub_cat, name, description, vendor, image, image_mode, stock, initial_stock, threshold, manual_closed, popular, spicy, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-    `).run(
-      id,
-      cat,
-      subCat,
-      name,
-      description,
-      vendor,
-      String(body.image || '').trim() || defaultImg,
-      imageMode,
-      stock,
-      stock,
-      threshold,
-      body.popular ? 1 : 0,
-      body.spicy ? 1 : 0,
-      now
+    await pool.execute(
+      `INSERT INTO menus
+       (id, name, category, sub_category, vendor, description, image_url, image_mode, plates_available, initial_plates, low_alert_threshold, manual_closed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      [id, name, category, subCategory, vendor, description, imageUrl, imageMode, plates, plates, threshold]
     )
 
-    return { ok: true, state: getFullEventState() }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   if (body.action === 'update_dish') {
-    const item = db.prepare('SELECT * FROM menu_items WHERE id = ?').get(body.itemId) as any
+    const [rows] = await pool.query<any[]>('SELECT * FROM menus WHERE id = ? LIMIT 1', [body.itemId])
+    const item = rows?.[0]
     if (!item) {
       throw createError({ statusCode: 404, statusMessage: 'Dish not found' })
     }
 
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : item.name
-    const cat = body.cat === 'continental' || body.cat === 'nigerian' ? body.cat : item.cat
-    const subCat = body.subCat ? normalizeSubCat(body.subCat, name) : (item.sub_cat || inferSubCat(name))
+    const category = body.cat === 'continental' || body.cat === 'nigerian' ? body.cat : item.category
+    const subCategory = body.subCat !== undefined ? normalizeSubCat(body.subCat) : (item.sub_category || 'other')
     const vendor = typeof body.vendor === 'string' && body.vendor.trim() ? body.vendor.trim() : item.vendor
-    const description = typeof body.description === 'string' && body.description.trim() ? body.description.trim() : item.description
-    const image = typeof body.image === 'string' && body.image.trim() ? body.image.trim() : item.image
+    const description = typeof body.description === 'string' ? body.description.trim() : item.description
+    const imageUrl = typeof body.image === 'string' && body.image.trim() ? body.image.trim() : item.image_url
     const imageMode = body.imageMode === 'placeholder' || body.imageMode === 'photo' ? body.imageMode : item.image_mode
-    const stock = typeof body.stock === 'number' ? Math.max(0, body.stock) : Number(item.stock)
-    const initialStock = Math.max(Number(item.initial_stock), stock)
-    const threshold = typeof body.threshold === 'number' ? Math.max(1, body.threshold) : Number(item.threshold)
-    const popular = typeof body.popular === 'boolean' ? (body.popular ? 1 : 0) : Number(item.popular)
-    const spicy = typeof body.spicy === 'boolean' ? (body.spicy ? 1 : 0) : Number(item.spicy)
+    const plates = typeof body.stock === 'number' ? Math.max(0, body.stock) : Number(item.plates_available)
+    const initialPlates = Math.max(Number(item.initial_plates), plates)
+    const threshold = typeof body.threshold === 'number' ? Math.max(1, body.threshold) : Number(item.low_alert_threshold)
 
-    db.prepare(`
-      UPDATE menu_items
-      SET cat = ?, sub_cat = ?, name = ?, description = ?, vendor = ?, image = ?, image_mode = ?,
-          stock = ?, initial_stock = ?, threshold = ?, popular = ?, spicy = ?, updated_at = ?
-      WHERE id = ?
-    `).run(cat, subCat, name, description, vendor, image, imageMode, stock, initialStock, threshold, popular, spicy, now, body.itemId)
+    await pool.execute(
+      `UPDATE menus
+       SET name = ?, category = ?, sub_category = ?, vendor = ?, description = ?, image_url = ?, image_mode = ?,
+           plates_available = ?, initial_plates = ?, low_alert_threshold = ?
+       WHERE id = ?`,
+      [name, category, subCategory, vendor, description, imageUrl, imageMode, plates, initialPlates, threshold, body.itemId]
+    )
 
-    return { ok: true, state: getFullEventState() }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   if (body.action === 'toggle_image_mode') {
-    const item = db.prepare('SELECT id, image_mode FROM menu_items WHERE id = ?').get(body.itemId) as any
+    const [rows] = await pool.query<any[]>('SELECT id, image_mode FROM menus WHERE id = ? LIMIT 1', [body.itemId])
+    const item = rows?.[0]
     if (!item) {
       throw createError({ statusCode: 404, statusMessage: 'Dish not found' })
     }
@@ -90,33 +87,34 @@ export default defineEventHandler(async (event) => {
       ? body.imageMode
       : (item.image_mode === 'placeholder' ? 'photo' : 'placeholder')
 
-    db.prepare('UPDATE menu_items SET image_mode = ?, updated_at = ? WHERE id = ?').run(nextMode, now, body.itemId)
-    return { ok: true, state: getFullEventState() }
+    await pool.execute('UPDATE menus SET image_mode = ? WHERE id = ?', [nextMode, body.itemId])
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   if (body.action === 'bulk_image_mode') {
     const nextMode = body.imageMode === 'placeholder' ? 'placeholder' : 'photo'
-    db.prepare('UPDATE menu_items SET image_mode = ?, updated_at = ?').run(nextMode, now)
-    return { ok: true, state: getFullEventState() }
+    await pool.execute('UPDATE menus SET image_mode = ?', [nextMode])
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   if (body.action === 'update_stock') {
-    const item = db.prepare('SELECT * FROM menu_items WHERE id = ?').get(body.itemId) as any
+    const [rows] = await pool.query<any[]>('SELECT * FROM menus WHERE id = ? LIMIT 1', [body.itemId])
+    const item = rows?.[0]
     if (!item) {
       throw createError({ statusCode: 404, statusMessage: 'Dish not found' })
     }
 
-    let nextStock = Number(item.stock)
-    let nextInitial = Number(item.initial_stock)
-    let nextThreshold = Number(item.threshold)
+    let nextPlates = Number(item.plates_available)
+    let nextInitial = Number(item.initial_plates)
+    let nextThreshold = Number(item.low_alert_threshold)
     let nextClosed = Number(item.manual_closed)
 
     if (typeof body.exactStock === 'number') {
-      nextStock = Math.max(0, body.exactStock)
-      if (nextStock > nextInitial) nextInitial = nextStock
+      nextPlates = Math.max(0, body.exactStock)
+      if (nextPlates > nextInitial) nextInitial = nextPlates
     } else if (typeof body.delta === 'number') {
-      nextStock = Math.max(0, nextStock + body.delta)
-      if (nextStock > nextInitial) nextInitial = nextStock
+      nextPlates = Math.max(0, nextPlates + body.delta)
+      if (nextPlates > nextInitial) nextInitial = nextPlates
     }
 
     if (typeof body.threshold === 'number') {
@@ -127,13 +125,14 @@ export default defineEventHandler(async (event) => {
       nextClosed = body.manualClosed ? 1 : 0
     }
 
-    db.prepare(`
-      UPDATE menu_items
-      SET stock = ?, initial_stock = ?, threshold = ?, manual_closed = ?, updated_at = ?
-      WHERE id = ?
-    `).run(nextStock, nextInitial, nextThreshold, nextClosed, now, body.itemId)
+    await pool.execute(
+      `UPDATE menus
+       SET plates_available = ?, initial_plates = ?, low_alert_threshold = ?, manual_closed = ?
+       WHERE id = ?`,
+      [nextPlates, nextInitial, nextThreshold, nextClosed, body.itemId]
+    )
 
-    return { ok: true, state: getFullEventState() }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
   if (body.action === 'delete_dish') {
@@ -141,14 +140,49 @@ export default defineEventHandler(async (event) => {
     if (!itemId) {
       throw createError({ statusCode: 400, statusMessage: 'Dish ID is required' })
     }
+    await pool.execute('DELETE FROM menus WHERE id = ?', [itemId])
+    return { ok: true, state: await getFullEventStateFromMysql() }
+  }
 
-    const item = db.prepare('SELECT id FROM menu_items WHERE id = ?').get(itemId) as any
-    if (!item) {
-      throw createError({ statusCode: 404, statusMessage: 'Dish not found' })
+  if (body.action === 'bulk_import') {
+    const items = Array.isArray(body.items) ? body.items : []
+    if (items.length === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'No menu items found in uploaded file.' })
     }
 
-    db.prepare('DELETE FROM menu_items WHERE id = ?').run(itemId)
-    return { ok: true, state: getFullEventState() }
+    let importedCount = 0
+    for (let idx = 0; idx < items.length; idx++) {
+      const raw = items[idx]
+      const name = String(raw.name || '').trim()
+      if (!name) continue
+      const catRaw = String(raw.cat || raw.category || '').trim().toLowerCase()
+      const category = catRaw.includes('cont') ? 'continental' : 'nigerian'
+      const subCategory = normalizeSubCat(raw.subCat ?? raw.sub_category ?? raw.subcategory)
+      const vendor = String(raw.vendor || 'RenGala Caterer').trim() || 'RenGala Caterer'
+      const description = String(raw.description || '').trim() || 'Freshly prepared event delicacy with rich accompaniments.'
+      const parsedStock = parseInt(String(raw.stock ?? raw.plates ?? ''), 10)
+      const plates = Number.isFinite(parsedStock) && parsedStock >= 0 ? parsedStock : 100
+      const parsedThreshold = parseInt(String(raw.threshold ?? ''), 10)
+      const threshold = Number.isFinite(parsedThreshold) && parsedThreshold >= 1 ? parsedThreshold : 10
+      const imageMode = raw.image ? 'photo' : 'placeholder'
+      const defaultImg = category === 'nigerian' ? '/images/menu/jollof-rice.jpg' : '/images/menu/oriental-prawns.jpg'
+      const imageUrl = String(raw.image || '').trim() || defaultImg
+      const id = `dish_${now}_${idx}`
+
+      await pool.execute(
+        `INSERT INTO menus
+         (id, name, category, sub_category, vendor, description, image_url, image_mode, plates_available, initial_plates, low_alert_threshold, manual_closed)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        [id, name, category, subCategory, vendor, description, imageUrl, imageMode, plates, plates, threshold]
+      )
+      importedCount++
+    }
+
+    if (importedCount === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'No valid rows with a dish Name were found in the file.' })
+    }
+
+    return { ok: true, importedCount, state: await getFullEventStateFromMysql() }
   }
 
   throw createError({ statusCode: 400, statusMessage: 'Invalid menu action' })

@@ -74,11 +74,14 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Food Sub-Category *</label>
+            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Food Sub-Category <span class="text-slate-400 font-normal">(Optional)</span>
+            </label>
             <select
               v-model="newDish.subCat"
               class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-white"
             >
+              <option value="other">None / General</option>
               <option v-for="sc in SUBCAT_OPTIONS" :key="sc.id" :value="sc.id">
                 {{ sc.label }}
               </option>
@@ -186,17 +189,6 @@
                 class="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono"
               />
             </div>
-
-            <div class="flex flex-wrap items-center gap-4 pt-1">
-              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                <input v-model="newDish.popular" type="checkbox" class="rounded text-emerald-600" />
-                <span>Popular Tag</span>
-              </label>
-              <label class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                <input v-model="newDish.spicy" type="checkbox" class="rounded text-red-600" />
-                <span>Spicy Tag</span>
-              </label>
-            </div>
           </div>
         </div>
 
@@ -242,6 +234,71 @@
           </button>
         </div>
       </form>
+    </div>
+
+    <!-- Bulk Menu File Upload (CSV / XLSX / XLS) -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-md space-y-4 transition-colors">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <VIcon name="upload" size="sm" class="text-orange-500" />
+            <span>Bulk Menu File Upload (CSV, XLSX, XLS)</span>
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Upload a spreadsheet of dishes. Supported headers:
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Name</code>,
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Category</code>,
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Vendor</code>,
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Sub-Category</code> (optional),
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Description</code> (optional),
+            <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Plates</code> (optional — counter updates automatically).
+          </p>
+        </div>
+
+        <button
+          @click="downloadMenuTemplate"
+          type="button"
+          class="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs transition shrink-0"
+        >
+          Download Sample Template (.xlsx)
+        </button>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border-2 border-dashed border-orange-500/50 bg-orange-500/5 hover:bg-orange-500/10 text-orange-700 dark:text-orange-300 text-xs font-extrabold cursor-pointer transition">
+          <VIcon name="upload" size="sm" />
+          <span>{{ bulkFileName ? `Selected: ${bulkFileName} (${bulkParsedItems.length} dishes)` : 'Choose CSV / XLSX / XLS Menu File' }}</span>
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            class="hidden"
+            @change="onMenuSpreadsheetSelected"
+          />
+        </label>
+
+        <button
+          v-if="bulkParsedItems.length > 0"
+          @click="confirmBulkMenuImport"
+          :disabled="isImportingBulk"
+          type="button"
+          class="px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition shadow-md shrink-0"
+        >
+          {{ isImportingBulk ? 'Importing...' : `Import ${bulkParsedItems.length} Dishes` }}
+        </button>
+
+        <button
+          v-if="bulkParsedItems.length > 0"
+          @click="clearBulkMenuFile"
+          type="button"
+          class="px-4 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs transition shrink-0"
+        >
+          Clear
+        </button>
+      </div>
+
+      <div v-if="bulkStatusMsg" class="text-xs font-bold px-3.5 py-2 rounded-xl border" :class="bulkStatusType === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'">
+        {{ bulkStatusMsg }}
+      </div>
     </div>
 
     <!-- Live Plate Stock & Visual Mode Manager -->
@@ -394,20 +451,11 @@
               <button
                 @click="openEditModal(item)"
                 type="button"
-                class="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-bold text-[11px] transition flex items-center gap-1"
+                class="p-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-500/40 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition flex items-center justify-center"
+                title="Edit dish details, picture, or delete"
+                aria-label="Edit dish"
               >
                 <VIcon name="edit" size="xs" />
-                <span>Upload / Edit Pic</span>
-              </button>
-
-              <button
-                @click="deleteDish(item)"
-                type="button"
-                class="px-2.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30 font-bold text-[11px] transition flex items-center gap-1"
-                title="Delete this dish from the menu"
-              >
-                <VIcon name="trash" size="xs" />
-                <span>Delete</span>
               </button>
             </div>
 
@@ -440,25 +488,25 @@
       </div>
     </div>
 
-    <!-- Edit Dish / Picture Modal -->
+    <!-- Full Edit / Delete Dish Modal -->
     <Transition name="pop-up">
       <div
         v-if="editingDish"
-        class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
         @click.self="editingDish = null"
       >
-        <div class="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+        <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <VIcon name="edit" size="sm" class="text-emerald-600" />
-              <span>Edit Dish Picture &amp; Category</span>
+              <span>Edit Dish Details &amp; Picture</span>
             </h3>
             <button @click="editingDish = null" type="button" class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white">
               <VIcon name="x" size="sm" />
             </button>
           </div>
 
-          <div class="h-40 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+          <div class="h-36 w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
             <MenuVisual
               :src="editingDish.image"
               :alt="editingDish.name"
@@ -469,15 +517,45 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="sm:col-span-2">
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Dish Name</label>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Dish Name *</label>
               <input v-model="editingDish.name" type="text" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white" />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sub-Category</label>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Main Menu Group</label>
+              <select v-model="editingDish.cat" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                <option value="nigerian">Nigerian Dishes</option>
+                <option value="continental">Continental Dishes</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Sub-Category <span class="text-slate-400 font-normal">(Optional)</span></label>
               <select v-model="editingDish.subCat" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white">
+                <option value="other">None / General</option>
                 <option v-for="sc in SUBCAT_OPTIONS" :key="sc.id" :value="sc.id">{{ sc.label }}</option>
               </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Vendor / Caterer</label>
+              <input v-model="editingDish.vendor" type="text" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Plates</label>
+                <input v-model.number="editingDish.stock" type="number" min="0" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Low Alert</label>
+                <input v-model.number="editingDish.threshold" type="number" min="1" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono" />
+              </div>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+              <input v-model="editingDish.description" type="text" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white" />
             </div>
 
             <div>
@@ -522,7 +600,7 @@
               </select>
             </div>
 
-            <div class="sm:col-span-2">
+            <div>
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Image URL</label>
               <input v-model="editingDish.image" type="text" class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono" />
             </div>
@@ -554,6 +632,7 @@
 </template>
 
 <script setup lang="ts">
+import * as XLSX from 'xlsx'
 import type { ImageDisplayMode, MenuItem, MenuSubCat } from '~/server/utils/db'
 import { CURATED_PHOTO_PRESETS, SUBCAT_META, SUBCAT_OPTIONS } from '~/utils/menuCatalog'
 
@@ -572,24 +651,34 @@ const isUploadingNew = ref(false)
 const isUploadingEdit = ref(false)
 const uploadError = ref('')
 
+// Bulk CSV/XLSX/XLS Menu Upload state
+const bulkFileName = ref('')
+const bulkParsedItems = ref<any[]>([])
+const isImportingBulk = ref(false)
+const bulkStatusMsg = ref('')
+const bulkStatusType = ref<'success' | 'error'>('success')
+
 const newDish = reactive({
   name: '',
   cat: 'nigerian' as 'nigerian' | 'continental',
-  subCat: 'rice' as MenuSubCat,
+  subCat: 'other' as MenuSubCat,
   vendor: 'Lagos Royal Kitchens',
   description: '',
   image: '/images/menu/jollof-rice.jpg',
   imageMode: 'photo' as ImageDisplayMode,
   stock: 120,
-  threshold: 10,
-  popular: false,
-  spicy: false
+  threshold: 10
 })
 
 const editingDish = ref<{
   id: string
   name: string
+  cat: 'nigerian' | 'continental'
   subCat: MenuSubCat
+  vendor: string
+  description: string
+  stock: number
+  threshold: number
   image: string
   imageMode: ImageDisplayMode
 } | null>(null)
@@ -646,18 +735,104 @@ const handleAddDish = async () => {
     action: 'add_dish',
     name: newDish.name,
     cat: newDish.cat,
-    subCat: newDish.subCat,
+    subCat: newDish.subCat || 'other',
     vendor: newDish.vendor,
     description: newDish.description,
     image: newDish.image,
     imageMode: newDish.imageMode,
     stock: newDish.stock,
-    threshold: newDish.threshold,
-    popular: newDish.popular,
-    spicy: newDish.spicy
+    threshold: newDish.threshold
   })
   newDish.name = ''
   newDish.description = ''
+}
+
+const downloadMenuTemplate = () => {
+  const sampleRows = [
+    { Name: 'Smoky Party Jollof Rice', Category: 'Nigerian', Vendor: 'Lagos Royal Kitchens', 'Sub-Category': 'rice', Description: 'Firewood-smoked party jollof rice', Plates: 150 },
+    { Name: 'Grilled Garlic Prawns & Pasta', Category: 'Continental', Vendor: 'Continental Chefs', 'Sub-Category': '', Description: 'Optional sub-category left blank', Plates: 100 }
+  ]
+  const ws = XLSX.utils.json_to_sheet(sampleRows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'RenGala_Menu')
+  XLSX.writeFile(wb, 'RenGala_Menu_Template.xlsx')
+}
+
+const onMenuSpreadsheetSelected = async (evt: Event) => {
+  const input = evt.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  bulkStatusMsg.value = ''
+  try {
+    const buffer = await file.arrayBuffer()
+    const wb = XLSX.read(buffer, { type: 'array' })
+    const sheetName = wb.SheetNames[0]
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(wb.Sheets[sheetName], { defval: '' })
+
+    const parsed = rows
+      .map((row) => {
+        const norm: Record<string, any> = {}
+        for (const [k, v] of Object.entries(row)) {
+          norm[k.trim().toLowerCase().replace(/[^a-z0-9]/g, '')] = v
+        }
+        const name = String(norm.name || norm.dish || norm.dishname || norm.meal || norm.item || '').trim()
+        if (!name) return null
+        return {
+          name,
+          cat: String(norm.category || norm.cat || norm.group || norm.menugroup || 'nigerian').trim(),
+          subCat: String(norm.subcategory || norm.subcat || norm.course || '').trim(),
+          vendor: String(norm.vendor || norm.caterer || 'RenGala Caterer').trim(),
+          description: String(norm.description || norm.desc || norm.notes || '').trim(),
+          stock: norm.plates !== '' && norm.plates !== undefined ? Number(norm.plates) : (norm.stock !== '' && norm.stock !== undefined ? Number(norm.stock) : 100),
+          image: String(norm.image || norm.imageurl || '').trim()
+        }
+      })
+      .filter(Boolean)
+
+    if (parsed.length === 0) {
+      bulkStatusType.value = 'error'
+      bulkStatusMsg.value = 'No valid dishes found. Make sure your file has a "Name" column.'
+      bulkParsedItems.value = []
+      bulkFileName.value = ''
+    } else {
+      bulkFileName.value = file.name
+      bulkParsedItems.value = parsed
+      bulkStatusType.value = 'success'
+      bulkStatusMsg.value = `Ready to import ${parsed.length} dishes from ${file.name}. Click "Import ${parsed.length} Dishes" to save.`
+    }
+  } catch (err: any) {
+    bulkStatusType.value = 'error'
+    bulkStatusMsg.value = err?.message || 'Failed to read spreadsheet file.'
+  } finally {
+    input.value = ''
+  }
+}
+
+const confirmBulkMenuImport = async () => {
+  if (!bulkParsedItems.value.length) return
+  isImportingBulk.value = true
+  bulkStatusMsg.value = ''
+  try {
+    const res: any = await updateMenuOrStock({
+      action: 'bulk_import',
+      items: bulkParsedItems.value
+    })
+    bulkStatusType.value = 'success'
+    bulkStatusMsg.value = `Successfully imported ${res?.importedCount || bulkParsedItems.value.length} dishes to the live menu!`
+    bulkParsedItems.value = []
+    bulkFileName.value = ''
+  } catch (err: any) {
+    bulkStatusType.value = 'error'
+    bulkStatusMsg.value = err?.data?.statusMessage || err?.message || 'Bulk import failed.'
+  } finally {
+    isImportingBulk.value = false
+  }
+}
+
+const clearBulkMenuFile = () => {
+  bulkFileName.value = ''
+  bulkParsedItems.value = []
+  bulkStatusMsg.value = ''
 }
 
 const toggleDishImageMode = async (itemId: string) => {
@@ -678,7 +853,12 @@ const openEditModal = (item: MenuItem) => {
   editingDish.value = {
     id: item.id,
     name: item.name,
+    cat: item.cat,
     subCat: item.subCat || 'other',
+    vendor: item.vendor || '',
+    description: item.description || '',
+    stock: item.stock,
+    threshold: item.threshold || 10,
     image: item.image,
     imageMode: item.imageMode || 'photo'
   }
@@ -690,7 +870,12 @@ const saveEditedDish = async () => {
     action: 'update_dish',
     itemId: editingDish.value.id,
     name: editingDish.value.name,
-    subCat: editingDish.value.subCat,
+    cat: editingDish.value.cat,
+    subCat: editingDish.value.subCat || 'other',
+    vendor: editingDish.value.vendor,
+    description: editingDish.value.description,
+    stock: Number(editingDish.value.stock),
+    threshold: Number(editingDish.value.threshold),
     image: editingDish.value.image,
     imageMode: editingDish.value.imageMode
   })

@@ -11,16 +11,16 @@
       :class="hoverScale ? 'group-hover:scale-105' : ''"
     />
 
-    <!-- Official Renaissance Placeholder Image (Light / Dark) -->
+    <!-- Official RenGala Placeholder SVG (Light / Dark) -->
     <div
       v-else
       class="w-full h-full flex items-center justify-center relative overflow-hidden"
       :class="isDark ? 'bg-[#090d16]' : 'bg-[#f8fafc]'"
     >
       <img
-        :src="isDark ? '/images/brand/renaissance-placeholder-dark.jpg' : '/images/brand/renaissance-placeholder-light.jpg'"
+        :src="isDark ? '/images/svg/placeholder-green-dark.svg' : '/images/svg/placeholder-green-light.svg'"
         :alt="alt"
-        class="w-full h-full object-cover transition-transform duration-500"
+        class="w-full h-full object-contain p-1 transition-transform duration-500"
         :class="hoverScale ? 'group-hover:scale-105' : ''"
       />
 

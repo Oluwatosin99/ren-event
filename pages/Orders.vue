@@ -1,27 +1,47 @@
 <template>
   <div class="max-w-5xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-8">
-    <!-- App Header Banner (Option 2: Ambient Aurora Glass Glow, no repetitive logo) -->
-    <div class="relative rounded-3xl p-1 sm:p-1.5 mb-6 overflow-hidden">
-      <!-- Diffused atmospheric aurora glow behind frosted glass -->
-      <div class="absolute -inset-4 bg-gradient-to-r from-emerald-500/25 via-emerald-400/15 to-orange-500/25 blur-2xl pointer-events-none"></div>
+    <!-- App Header Banner (Replicated Admin Isometric Hexagons at 19% Opacity + Watermarked Glass) -->
+    <div class="p-[2px] rounded-3xl bg-gradient-to-r from-emerald-500 via-yellow-400 to-orange-500 shadow-xl mb-6">
+      <div class="relative overflow-hidden rounded-[22px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Soft RenGala Ambient Wash -->
+        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-yellow-400/10 to-orange-500/10 pointer-events-none"></div>
 
-      <div class="relative rounded-[22px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-white/10 p-5 sm:p-7 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="max-w-xl">
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+        <!-- Isometric Hexagon / Cube Pattern at 19% Opacity -->
+        <svg class="absolute inset-0 w-full h-full opacity-[0.19] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="ordersHexGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#10b981" />
+              <stop offset="50%" stop-color="#eab308" />
+              <stop offset="100%" stop-color="#f97316" />
+            </linearGradient>
+            <pattern id="ordersIsoHexPattern" width="56" height="96" patternUnits="userSpaceOnUse">
+              <path
+                d="M28 0 L56 16 L56 48 L28 64 L0 48 L0 16 Z M28 0 L28 32 M0 48 L28 32 L56 48 M28 64 L28 96 M0 48 L28 64 L56 48 M0 80 L28 64 L56 80"
+                fill="none"
+                stroke="url(#ordersHexGrad)"
+                stroke-width="1.5"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#ordersIsoHexPattern)" />
+        </svg>
+
+        <div class="relative z-10 max-w-xl">
+          <div class="flex flex-wrap items-center gap-2 mb-2.5">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold uppercase tracking-wider">
               <VIcon name="utensils" size="xs" />
               <span>Order Your Food</span>
             </span>
           </div>
-          <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Renaissance End of Year Party Menu
+          <h1 class="text-xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+            RenGala Meal Menu
           </h1>
-          <p class="text-xs mt-1 text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p class="text-xs sm:text-sm mt-1.5 text-slate-600 dark:text-slate-300 leading-relaxed">
             Confirm your Name, Table, and Seat number below, choose Nigerian or Continental cuisine, and switch between Grid, Form List, or Grouped views. Items unavailable automatically mark <strong>SOLD OUT</strong>.
           </p>
         </div>
 
-        <div v-if="lastGuestOrder" class="shrink-0">
+        <div v-if="lastGuestOrder" class="relative z-10 shrink-0">
           <button
             @click="showTicketModal = true"
             type="button"
@@ -288,24 +308,6 @@
               />
               <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/15 to-transparent pointer-events-none"></div>
 
-              <!-- Top Left Badges -->
-              <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                <span
-                  v-if="dish.popular && !isDishSoldOut(dish)"
-                  class="px-2 py-0.5 rounded-full bg-yellow-400 text-slate-950 font-extrabold text-[10px] uppercase shadow flex items-center gap-1"
-                >
-                  <VIcon name="star" size="xs" />
-                  <span>Popular</span>
-                </span>
-                <span
-                  v-if="dish.spicy"
-                  class="px-2 py-0.5 rounded-full bg-red-600 text-white font-bold text-[10px] shadow flex items-center gap-1"
-                >
-                  <VIcon name="flame" size="xs" />
-                  <span>Spicy</span>
-                </span>
-              </div>
-
               <!-- Top Right Plate Counter / Sold Out Badge -->
               <div class="absolute top-2.5 right-2.5">
                 <span
@@ -401,12 +403,6 @@
                   :class="isDishSoldOut(dish) ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'"
                 >
                   {{ dish.name }}
-                </span>
-                <span v-if="dish.popular && !isDishSoldOut(dish)" class="px-1.5 py-0.5 rounded bg-yellow-400 text-slate-950 font-black text-[9px] uppercase">
-                  Popular
-                </span>
-                <span v-if="dish.spicy" class="px-1.5 py-0.5 rounded bg-red-600 text-white font-bold text-[9px] uppercase">
-                  Spicy
                 </span>
               </div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
@@ -616,11 +612,11 @@
     >
       <div class="grid grid-cols-1 md:grid-cols-5">
         <!-- Placeholder / Brand Visual -->
-        <div class="md:col-span-2 relative h-56 md:h-auto bg-slate-100 dark:bg-[#090d16]">
+        <div class="md:col-span-2 relative h-56 md:h-auto bg-slate-100 dark:bg-[#090d16] flex items-center justify-center">
           <img
-            :src="isDark ? '/images/brand/renaissance-placeholder-dark.jpg' : '/images/brand/renaissance-placeholder-light.jpg'"
+            :src="isDark ? '/images/svg/placeholder-gala-dark.svg' : '/images/svg/placeholder-gala-light.svg'"
             alt="Thank you"
-            class="w-full h-full object-cover"
+            class="w-full h-full object-contain p-4"
           />
           <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-black uppercase tracking-wider flex items-center gap-1 shadow">
             <VIcon name="checkCircle" size="xs" />
@@ -643,7 +639,7 @@
             <p class="text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
               Your meal has been sent to the kitchen and will be served at
               <strong class="text-slate-900 dark:text-white">{{ lastGuestOrder.table }} • {{ lastGuestOrder.seat }}</strong>.
-              Sit back and enjoy the Renaissance End of Year Party.
+              Sit back and enjoy RenGala — End of Year Event.
             </p>
             <p
               v-if="alreadyOrderedNotice"
@@ -861,26 +857,9 @@
 
             <div class="flex flex-col items-center justify-center pt-1">
               <div class="p-3 bg-white border-2 border-slate-900 rounded-2xl">
-                <svg class="w-28 h-28 text-slate-950" viewBox="0 0 100 100" fill="currentColor">
-                  <rect x="8" y="8" width="26" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="15" y="15" width="12" height="12" rx="1"/>
-                  <rect x="66" y="8" width="26" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="73" y="15" width="12" height="12" rx="1"/>
-                  <rect x="8" y="66" width="26" height="26" rx="3" fill="none" stroke="currentColor" stroke-width="6"/>
-                  <rect x="15" y="73" width="12" height="12" rx="1"/>
-                  <rect x="42" y="12" width="8" height="8"/>
-                  <rect x="42" y="26" width="8" height="16"/>
-                  <rect x="12" y="44" width="16" height="8"/>
-                  <rect x="36" y="44" width="24" height="8"/>
-                  <rect x="44" y="56" width="8" height="16"/>
-                  <rect x="64" y="44" width="12" height="8"/>
-                  <rect x="82" y="44" width="10" height="18"/>
-                  <rect x="58" y="66" width="16" height="8"/>
-                  <rect x="42" y="80" width="22" height="12"/>
-                  <rect x="74" y="76" width="18" height="16"/>
-                </svg>
+                <QrCode :value="lastGuestOrder.qrToken || lastGuestOrder.id" :size="128" />
               </div>
-              <div class="text-[11px] font-bold text-slate-600 mt-1.5">{{ lastGuestOrder.qrToken }}</div>
+              <div class="text-[11px] font-bold text-slate-600 mt-1.5">{{ lastGuestOrder.qrToken || lastGuestOrder.id }}</div>
             </div>
 
             <div class="pt-2">
@@ -892,6 +871,43 @@
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+    <!-- Duplicate Table & Seat Notification Modal -->
+    <Transition name="pop-up">
+      <div
+        v-if="duplicateSeatModal"
+        class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="duplicateSeatModal = null"
+      >
+        <div class="w-full max-w-md p-[2px] rounded-3xl bg-gradient-to-r from-orange-500 via-yellow-400 to-red-500 shadow-2xl">
+          <div class="bg-white dark:bg-slate-900 rounded-[22px] p-6 text-center space-y-4">
+            <div class="w-14 h-14 rounded-2xl bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 flex items-center justify-center mx-auto">
+              <VIcon name="alert" size="lg" />
+            </div>
+
+            <div class="space-y-1.5">
+              <h3 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                Table &amp; Seat Already Ordered
+              </h3>
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-300 text-xs font-extrabold">
+                <span>{{ duplicateSeatModal.table }} • {{ duplicateSeatModal.seat }}</span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed pt-1">
+                Someone has already placed an order with these credentials (<strong>{{ duplicateSeatModal.table }}</strong> &amp; <strong>{{ duplicateSeatModal.seat }}</strong>).
+                Kindly cross-check your Table Number and Seat Number and try again. Thank you, and enjoy the event!
+              </p>
+            </div>
+
+            <button
+              @click="duplicateSeatModal = null"
+              type="button"
+              class="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition shadow-lg shadow-emerald-600/20"
+            >
+              Cross-Check Table &amp; Seat
+            </button>
           </div>
         </div>
       </div>
@@ -923,6 +939,7 @@ const isStaffOrAdmin = computed(() => userSession.value.role === 'admin' || user
 
 const allowOrderOverride = Boolean(useRuntimeConfig().public.allowOrderOverride)
 const showConfirmModal = ref(false)
+const duplicateSeatModal = ref<{ table: string; seat: string } | null>(null)
 const devOverrideActive = ref(false)
 const alreadyOrderedNotice = ref('')
 
@@ -1130,13 +1147,17 @@ const handleSubmitOrder = async () => {
     showConfirmModal.value = false
     devOverrideActive.value = false
     alreadyOrderedNotice.value = ''
+    duplicateSeatModal.value = null
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
   } else if ('alreadyOrdered' in res && res.alreadyOrdered) {
-    // Seat already has a meal -> show the existing order on the Thank You screen
+    // Strictly block duplicate Table & Seat orders and show the friendly modal
     showConfirmModal.value = false
-    alreadyOrderedNotice.value = `${res.error} Showing the existing order for this seat.`
-    if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+    duplicateSeatModal.value = {
+      table: orderForm.table,
+      seat: orderForm.seat
+    }
   } else {
+    showConfirmModal.value = false
     errorBanner.value = res.error
   }
 }

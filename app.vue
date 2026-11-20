@@ -1,21 +1,24 @@
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300 selection:bg-orange-500 selection:text-white">
+    <!-- Application Loader Splash (Always runs first on initial load & reload for ~2.5s) -->
+    <BrandSplash />
+
     <!-- Top Application Navigation Bar -->
     <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-3 sm:px-6 py-2.5 transition-colors duration-300">
       <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
-        <!-- Brand Identity (Official Light/Dark SVG Mark + Role Badge) -->
+        <!-- Brand Identity (Official RenGala Light/Dark SVG Mark + Role Badge) -->
         <NuxtLink to="/" class="flex items-center gap-2.5 sm:gap-3 group shrink-0">
           <div class="relative w-10 h-10 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-1 shadow-sm group-hover:scale-105 transition-transform flex items-center justify-center overflow-hidden">
             <img
-              :src="isDark ? '/images/brand/logo-mark-dark.svg' : '/images/brand/logo-mark-light.svg'"
-              alt="Renaissance Event"
+              :src="isDark ? '/images/svg/rengala-mark-dark.svg' : '/images/svg/rengala-mark-light.svg'"
+              alt="RenGala"
               class="w-full h-full object-contain"
             />
           </div>
           <div>
             <div class="flex items-center gap-2">
               <span class="font-extrabold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                Renaissance Event
+                RenGala
               </span>
               <span
                 class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-full border"
@@ -26,7 +29,7 @@
               </span>
             </div>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              End of Year Party • Event Operations &amp; Catering
+              End of Year Event • Operations &amp; Catering
             </p>
           </div>
         </NuxtLink>
@@ -137,7 +140,7 @@ useHead({
     {
       rel: 'icon',
       type: 'image/svg+xml',
-      href: computed(() => (isDark.value ? '/images/brand/logo-mark-dark.svg' : '/images/brand/logo-mark-light.svg'))
+      href: computed(() => (isDark.value ? '/images/svg/rengala-mark-dark.svg' : '/images/svg/rengala-mark-light.svg'))
     }
   ]
 })
@@ -223,7 +226,19 @@ const visibleNavItems = computed(() => {
     ]
   }
 
-  if (role === 'admin' || role === 'vendor') {
+  if (role === 'vendor') {
+    return [
+      {
+        to: '/vendor',
+        label: 'Kitchen Orders',
+        shortLabel: 'Orders',
+        icon: 'printer',
+        badge: unprocessedOrdersCount.value || undefined
+      }
+    ]
+  }
+
+  if (role === 'admin') {
     return [
       {
         to: '/admin',

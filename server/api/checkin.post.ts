@@ -1,136 +1,118 @@
-import { getDb, getFullEventState } from '../utils/db'
+import crypto from 'node:crypto'
+import { getMysqlPool, getFullEventStateFromMysql, formatTimeLabel } from '../utils/mysql'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const db = getDb()
-  const now = Date.now()
-  const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const pool = getMysqlPool()
+  const nowLabel = formatTimeLabel(new Date())
 
+  // 1. Front-Gate QR Scan against `registered_guests` -> logs into `admitted_guests`
   if (body.action === 'scan_qr') {
-    const code = String(body.code || '').trim().toUpperCase()
+    const code = String(body.code || '').trim()
     const admittedBy = String(body.admittedBy || 'Gate Personnel').trim()
-    let attendee = db.prepare('SELECT * FROM attendees WHERE UPPER(ticket_id) = ?').get(code) as any
 
-    if (!attendee && body.simulateMode === 'valid') {
-      const randomNum = Math.floor(1000 + Math.random() * 8999)
-      const tableNum = Math.floor(1 + Math.random() * 60)
-      const seatNum = Math.floor(1 + Math.random() * 10)
-      const sampleGuests = [
-        { name: 'Ngozi Okafor', type: 'Pre-Registered (Yes)', sponsor: 'REN-STF-102', isVip: 0 },
-        { name: 'Brossa Adewale (VIP)', type: 'VIP', sponsor: 'REN-VIP-001', isVip: 1 },
-        { name: 'Tajudeen Lawal', type: 'Pre-Registered (Yes)', sponsor: 'REN-STF-019', isVip: 0 },
-        { name: 'Paul Ekong', type: 'Third-Party', sponsor: 'REN-3P-011', isVip: 0 }
-      ]
-      const pick = sampleGuests[Math.floor(Math.random() * sampleGuests.length)]
-      const ticketId = `REN-${randomNum}`
-      const tableNo = `Table ${tableNum}`
-      const seatNo = `Seat ${seatNum}`
+    const [rows] = await pool.query<any[]>(
+      'SELECT * FROM registered_guests WHERE UPPER(uuid) = UPPER(?) LIMIT 1',
+      [code]
+    )
+    const guest = rows?.[0]
 
-      db.prepare(`
-        INSERT INTO attendees (ticket_id, name, guest_type, sponsor_staff_id, table_no, seat_no, checked_in, checked_in_at, phone, email, admitted_by, is_vip, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 1, ?, '', '', ?, ?, ?)
-      `).run(ticketId, pick.name, pick.type, pick.sponsor, tableNo, seatNo, timeLabel, admittedBy, pick.isVip, now)
+    if (guest) {
+      const isVip = Boolean(guest.is_vip) || String(guest.name || '').toUpperCase().startsWith('VIP')
+      const guestType = guest.guest_type || (isVip ? 'VIP' : 'Pre-Registered')
+
+      if (guest.admissionstatus !== 'admitted') {
+        await pool.execute(
+          `UPDATE registered_guests
+           SET admissionstatus = 'admitted', admitted_at = NOW(), admitted_by = ?
+           WHERE uuid = ?`,
+          [admittedBy, guest.uuid]
+        )
+      }
+
+      // Record in `admitted_guests` table (idempotent via UNIQUE guest_uuid)
+      await pool.execute(
+        `INSERT IGNORE INTO admitted_guests
+         (guest_uuid, name, guest_type, is_vip, email, phone, admission_method, admitted_by, admitted_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'qr_scan', ?, NOW())`,
+        [guest.uuid, guest.name, guestType, isVip ? 1 : 0, guest.email || null, guest.phone || null, admittedBy]
+      )
 
       return {
         ok: true,
         status: 'verified',
         attendee: {
-          ticketId,
-          name: pick.name,
-          type: pick.type,
-          sponsorStaffId: pick.sponsor,
-          table: tableNo,
-          seat: seatNo,
+          ticketId: guest.uuid,
+          name: guest.name,
+          type: guestType,
+          sponsorStaffId: '',
+          table: 'Open Seating',
+          seat: '-',
           checkedIn: true,
-          checkedInAt: timeLabel,
-          admittedBy,
-          isVip: Boolean(pick.isVip)
+          checkedInAt: guest.admitted_at ? formatTimeLabel(guest.admitted_at) : nowLabel,
+          phone: guest.phone || undefined,
+          email: guest.email || undefined,
+          admittedBy: guest.admitted_by || admittedBy,
+          isVip
         },
-        state: getFullEventState()
-      }
-    }
-
-    if (attendee) {
-      if (!attendee.checked_in) {
-        db.prepare('UPDATE attendees SET checked_in = 1, checked_in_at = ?, admitted_by = ? WHERE ticket_id = ?').run(timeLabel, admittedBy, attendee.ticket_id)
-      }
-      return {
-        ok: true,
-        status: 'verified',
-        attendee: {
-          ticketId: attendee.ticket_id,
-          name: attendee.name,
-          type: attendee.guest_type,
-          sponsorStaffId: attendee.sponsor_staff_id,
-          table: attendee.table_no,
-          seat: attendee.seat_no,
-          checkedIn: true,
-          checkedInAt: attendee.checked_in_at || timeLabel,
-          phone: attendee.phone || undefined,
-          email: attendee.email || undefined,
-          admittedBy: attendee.admitted_by || admittedBy,
-          isVip: Boolean(attendee.is_vip) || attendee.guest_type === 'VIP'
-        },
-        state: getFullEventState()
+        state: await getFullEventStateFromMysql()
       }
     }
 
     return {
       ok: false,
       status: 'unregistered',
-      message: 'Unregistered arrival or missing QR tag. Assign Table & Seat via Manual Admission.',
-      state: getFullEventState()
+      message: 'Unregistered arrival or missing QR tag. Please complete On-Site Registration.',
+      state: await getFullEventStateFromMysql()
     }
   }
 
+  // 2. On-Site Walk-In Guest Registration -> inserts into `registered_guests` AND `admitted_guests`
   if (body.action === 'post_register') {
     const name = String(body.name || '').trim()
     if (!name) {
-      throw createError({ statusCode: 400, statusMessage: 'Guest full name is required for manual admission.' })
+      throw createError({ statusCode: 400, statusMessage: 'Guest full name is required for on-site admission.' })
     }
     const phone = String(body.phone || '').trim()
     const email = String(body.email || '').trim()
     const admittedBy = String(body.admittedBy || 'Gate Personnel').trim()
     const isVip = Boolean(body.isVip) || body.guestType === 'VIP'
     const guestType = isVip ? 'VIP' : (body.guestType || 'On-Site Registered')
-    const sponsor = String(body.sponsor || 'On-Site Verification').trim()
-    const table = String(body.table || 'Table 14')
-    const seat = String(body.seat || 'Seat 6')
-    const tableNo = table.startsWith('Table') ? table : `Table ${table}`
-    const seatNo = seat.startsWith('Seat') ? seat : `Seat ${seat}`
-    const ticketId = `REN-W${Math.floor(100 + Math.random() * 899)}`
+    const uuid = crypto.randomUUID()
 
-    db.prepare(`
-      INSERT INTO attendees (ticket_id, name, guest_type, sponsor_staff_id, table_no, seat_no, checked_in, checked_in_at, phone, email, admitted_by, is_vip, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
-    `).run(ticketId, name, guestType, sponsor, tableNo, seatNo, timeLabel, phone, email, admittedBy, isVip ? 1 : 0, now)
+    await pool.execute(
+      `INSERT INTO registered_guests
+       (uuid, name, admissionstatus, admitted_at, admitted_by, email, phone, guest_type, is_vip)
+       VALUES (?, ?, 'admitted', NOW(), ?, ?, ?, ?, ?)`,
+      [uuid, name, admittedBy, email || null, phone || null, guestType, isVip ? 1 : 0]
+    )
+
+    await pool.execute(
+      `INSERT INTO admitted_guests
+       (guest_uuid, name, guest_type, is_vip, email, phone, admission_method, admitted_by, admitted_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'on_site', ?, NOW())`,
+      [uuid, name, guestType, isVip ? 1 : 0, email || null, phone || null, admittedBy]
+    )
 
     return {
       ok: true,
       attendee: {
-        ticketId,
+        ticketId: uuid,
         name,
         type: guestType,
-        sponsorStaffId: sponsor,
-        table: tableNo,
-        seat: seatNo,
+        sponsorStaffId: '',
+        table: 'Open Seating',
+        seat: '-',
         checkedIn: true,
-        checkedInAt: timeLabel,
-        phone,
-        email,
+        checkedInAt: nowLabel,
+        phone: phone || undefined,
+        email: email || undefined,
         admittedBy,
         isVip
       },
-      state: getFullEventState()
+      state: await getFullEventStateFromMysql()
     }
   }
 
-  if (body.action === 'toggle_seat_release') {
-    const row = db.prepare("SELECT value FROM event_settings WHERE key = 'unclaimed_seats_released'").get() as { value: string } | undefined
-    const nextVal = row?.value === '1' ? '0' : '1'
-    db.prepare("INSERT OR REPLACE INTO event_settings (key, value) VALUES ('unclaimed_seats_released', ?)").run(nextVal)
-    return { ok: true, state: getFullEventState() }
-  }
-
-  throw createError({ statusCode: 400, statusMessage: 'Invalid check-in action' })
+  throw createError({ statusCode: 400, statusMessage: 'Invalid gate action' })
 })

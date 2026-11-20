@@ -222,13 +222,13 @@ export const useEventSuite = () => {
     } catch (err: any) {
       await fetchState()
       const errData = err?.data?.data
-      if (errData?.code === 'ALREADY_ORDERED' && errData.order) {
-        persistGuestOrder(errData.order)
+      if (errData?.code === 'ALREADY_ORDERED') {
         return {
           ok: false as const,
           alreadyOrdered: true as const,
-          order: errData.order as FoodOrder,
-          error: err?.data?.statusMessage || 'A meal has already been ordered for this seat.'
+          table: errData.table as string | undefined,
+          seat: errData.seat as string | undefined,
+          error: err?.data?.statusMessage || 'Someone has already ordered with these credentials. Kindly cross-check your Table Number and Seat Number and try again.'
         }
       }
       return {

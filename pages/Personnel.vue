@@ -10,7 +10,7 @@
             <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
             <span class="w-2 h-2 rounded-full bg-red-600"></span>
           </span>
-          <span>Renaissance Event • Personnel Portal</span>
+          <span>RenGala • Personnel Portal</span>
         </div>
 
         <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -136,6 +136,15 @@ const testAccounts = [
     cardClass: 'bg-orange-500/5 hover:bg-orange-500/10 border-orange-500/25'
   },
   {
+    title: 'Food Vendor / Receipt Printer',
+    email: 'vendor@renaissance.ng',
+    password: 'vendor123',
+    desc: 'View all orders, search, print & reprint thermal receipts',
+    icon: 'printer',
+    iconClass: 'text-yellow-600 dark:text-yellow-400',
+    cardClass: 'bg-yellow-400/10 hover:bg-yellow-400/20 border-yellow-500/30'
+  },
+  {
     title: 'Delivery Checker',
     email: 'delivery@renaissance.ng',
     password: 'delivery123',
@@ -147,7 +156,8 @@ const testAccounts = [
 ]
 
 const routeByRole = (role: string) => {
-  if (role === 'admin' || role === 'vendor') return '/admin'
+  if (role === 'admin') return '/admin'
+  if (role === 'vendor') return '/vendor'
   if (role === 'registrar') return '/scanner'
   if (role === 'delivery') return '/delivery'
   return '/Orders'

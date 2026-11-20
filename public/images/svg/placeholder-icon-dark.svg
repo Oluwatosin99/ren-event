@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" fill="none">
+  <defs>
+    <linearGradient id="phBgDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16" />
+      <stop offset="50%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#131C31" />
+    </linearGradient>
+    <linearGradient id="phStrokeDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="35%" stop-color="#FFD400" />
+      <stop offset="70%" stop-color="#FF6F00" />
+      <stop offset="100%" stop-color="#FF2A2A" />
+    </linearGradient>
+    <pattern id="phGridDark" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#334155" fill-opacity="0.6" />
+    </pattern>
+  </defs>
+
+  <!-- Card Background -->
+  <rect width="320" height="220" rx="20" fill="url(#phBgDark)" />
+  <rect width="320" height="220" rx="20" fill="url(#phGridDark)" />
+
+  <!-- Top Signature Renaissance Gradient Strip -->
+  <rect x="0" y="0" width="320" height="4" fill="url(#phStrokeDark)" />
+
+  <!-- Soft Ambient Glow Circles -->
+  <circle cx="65" cy="50" r="46" fill="#10B981" fill-opacity="0.1" />
+  <circle cx="255" cy="170" r="54" fill="#FF6F00" fill-opacity="0.1" />
+
+  <!-- Central Placeholder Emblem Container -->
+  <g transform="translate(104, 34)">
+    <rect x="0" y="0" width="112" height="112" rx="28" fill="#090D16" stroke="#1E293B" stroke-width="2" />
+    <rect x="6" y="6" width="100" height="100" rx="22" fill="#0F172A" stroke="url(#phStrokeDark)" stroke-width="1.8" stroke-dasharray="6 4" />
+
+    <!-- QR Scanner Corner Brackets -->
+    <path d="M18 32 V22 C18 19.7909 19.7909 18 22 18 H32" stroke="#34D399" stroke-width="3" stroke-linecap="round" />
+    <path d="M80 18 H90 C92.2091 18 94 19.7909 94 22 V32" stroke="#FF6F00" stroke-width="3" stroke-linecap="round" />
+    <path d="M18 80 V90 C18 92.2091 19.7909 94 22 94 H32" stroke="#10B981" stroke-width="3" stroke-linecap="round" />
+    <path d="M94 80 V90 C94 92.2091 92.2091 94 90 94 H80" stroke="#FF3B30" stroke-width="3" stroke-linecap="round" />
+
+    <!-- Serving Cloche / Food Order Icon in Center -->
+    <circle cx="56" cy="34" r="3.5" fill="#FFD400" stroke="#FF6F00" stroke-width="1.8" />
+    <path d="M32 60 C32 46.7452 42.7452 36 56 36 C69.2548 36 80 46.7452 80 60" stroke="#34D399" stroke-width="3.2" stroke-linecap="round" fill="#064E3B" fill-opacity="0.55" />
+    <line x1="27" y1="64" x2="85" y2="64" stroke="#F8FAFC" stroke-width="3.2" stroke-linecap="round" />
+    <path d="M35 69 H77" stroke="#FFD400" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Mini QR Squares Embedded on Cloche -->
+    <rect x="47" y="46" width="6" height="6" rx="1.2" fill="#34D399" />
+    <rect x="59" y="46" width="6" height="6" rx="1.2" fill="#FF6F00" />
+    <rect x="47" y="54" width="6" height="4" rx="1" fill="#FFD400" />
+    <rect x="59" y="54" width="6" height="4" rx="1" fill="#FF3B30" />
+  </g>
+
+  <!-- Label Pill Below Icon -->
+  <rect x="82" y="158" width="156" height="24" rx="12" fill="#090D16" stroke="#334155" stroke-width="1.2" />
+  <circle cx="96" cy="170" r="3.5" fill="#10B981" />
+  <text x="106" y="174" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10.5" font-weight="800" letter-spacing="0.5" fill="#F8FAFC">RENAISSANCE EVENT</text>
+
+  <text x="160" y="198" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#94A3B8">QR Gate &amp; Catering Visual Placeholder</text>
+</svg>

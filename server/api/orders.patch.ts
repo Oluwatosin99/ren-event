@@ -1,199 +1,199 @@
-import { getDb, getFullEventState } from '../utils/db'
+import { getMysqlPool, getFullEventStateFromMysql, syncTableSeatingRow } from '../utils/mysql'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const db = getDb()
+  const pool = getMysqlPool()
 
-  // Scan QR code or Order ID to mark as Delivered
+  // 1. Scan Receipt QR code or Order ID to mark as Delivered + log to `delivery_audit_logs` & `order_qr_scans`
   if (body.action === 'scan_delivery') {
     const tokenOrId = String(body.query || '').trim().toUpperCase()
     const serverName = String(body.serverName || 'Food Server').trim()
-    const now = Date.now()
 
-    // 1. Try Supabase first if available
-    const { getSupabase } = await import('../utils/supabase')
-    const sb = getSupabase()
-    if (sb) {
-      const { data: matched } = await sb
-        .from('orders')
-        .select('*')
-        .or(`id.ilike.${tokenOrId},qr_token.ilike.${tokenOrId}`)
-        .limit(1)
+    const [rows] = await pool.query<any[]>(
+      'SELECT * FROM orders WHERE UPPER(id) = ? OR UPPER(qr_token) = ? LIMIT 1',
+      [tokenOrId, tokenOrId]
+    )
+    const ord = rows?.[0]
 
-      if (matched && matched.length > 0) {
-        const ord = matched[0]
-        await sb
-          .from('orders')
-          .update({
-            status: 'delivered',
-            served_by: serverName,
-            served_at: now
-          })
-          .eq('id', ord.id)
-
-        const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
-        const state = await fetchEventStateFromSupabase()
-        return {
-          ok: true,
-          order: {
-            id: ord.id,
-            guest: ord.guest_name,
-            table: ord.table_no,
-            seat: ord.seat_no,
-            dish: ord.dish_name,
-            status: 'delivered',
-            servedBy: serverName,
-            servedAt: now
-          },
-          state: state || getFullEventState()
-        }
-      }
-    }
-
-    // 2. Fallback to SQLite
-    const order = db.prepare('SELECT * FROM orders WHERE UPPER(id) = ? OR UPPER(qr_token) = ?').get(tokenOrId, tokenOrId) as any
-    if (!order) {
+    if (!ord) {
+      await pool.execute(
+        `INSERT INTO order_qr_scans (order_id, qr_code_value, scanned_by, scan_result)
+         VALUES (NULL, ?, ?, 'not_found')`,
+        [tokenOrId, serverName]
+      )
       throw createError({
         statusCode: 404,
         statusMessage: `No order matching QR / Ticket "${body.query}" was found.`
       })
     }
-    db.prepare("UPDATE orders SET status = 'delivered', served_by = ?, served_at = ? WHERE id = ?").run(serverName, now, order.id)
+
+    const wasAlreadyDelivered = ord.status === 'delivered'
+
+    await pool.execute(
+      `UPDATE orders
+       SET status = 'delivered', served_by = ?, served_at = NOW()
+       WHERE id = ?`,
+      [serverName, ord.id]
+    )
+
+    // Update `table_seating` matrix to 'served'
+    await syncTableSeatingRow(pool, Number(ord.table_number), Number(ord.seat_number), ord.id, 'served')
+
+    // Log into `order_qr_scans`
+    await pool.execute(
+      `INSERT INTO order_qr_scans (order_id, qr_code_value, table_no, seat_no, guest_name, scanned_by, scan_result)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        ord.id,
+        tokenOrId,
+        ord.table_no,
+        ord.seat_no,
+        ord.guest_name,
+        serverName,
+        wasAlreadyDelivered ? 'already_delivered' : 'matched_delivered'
+      ]
+    )
+
+    // Log into `delivery_audit_logs`
+    await pool.execute(
+      `INSERT INTO delivery_audit_logs (order_id, qr_token, guest_name, table_no, seat_no, dish_name, action, performed_by, performed_role, notes)
+       VALUES (?, ?, ?, ?, ?, ?, 'scan_delivery', ?, 'delivery', ?)`,
+      [
+        ord.id,
+        ord.qr_token || ord.id,
+        ord.guest_name,
+        ord.table_no,
+        ord.seat_no,
+        ord.dish_name,
+        serverName,
+        `Marked delivered via QR/ID scan (${tokenOrId})`
+      ]
+    )
+
     return {
       ok: true,
       order: {
-        id: order.id,
-        guest: order.guest_name,
-        table: order.table_no,
-        seat: order.seat_no,
-        dish: order.dish_name,
+        id: ord.id,
+        guest: ord.guest_name,
+        table: ord.table_no,
+        seat: ord.seat_no,
+        dish: ord.dish_name,
         status: 'delivered',
         servedBy: serverName,
-        servedAt: now
+        servedAt: Date.now()
       },
-      state: getFullEventState()
+      state: await getFullEventStateFromMysql()
     }
   }
 
-  // Clear all orders (Safety check before editing table layout)
+  // 2. Clear all orders (Safety check before editing table layout)
   if (body.action === 'clear_all_orders') {
-    const { getSupabase } = await import('../utils/supabase')
-    const sb = getSupabase()
-    if (sb) {
-      await sb.from('orders').delete().neq('id', '')
-    }
-    db.prepare('DELETE FROM orders').run()
-    if (sb) {
-      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
-      const state = await fetchEventStateFromSupabase()
-      return { ok: true, state: state || getFullEventState() }
-    }
-    return { ok: true, state: getFullEventState() }
+    await pool.execute('DELETE FROM orders')
+    await pool.execute("UPDATE table_seating SET order_id = NULL, seat_status = 'empty'")
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
-  // Batch print unprocessed orders
+  // 3. Batch print unprocessed orders
   if (body.action === 'batch_print') {
     const ids: string[] = Array.isArray(body.orderIds) ? body.orderIds : []
-    const { getSupabase } = await import('../utils/supabase')
-    const sb = getSupabase()
-    if (sb && ids.length > 0) {
-      const { data: rows } = await sb.from('orders').select('id, status, print_count').in('id', ids)
-      for (const r of rows || []) {
-        const nextStatus = r.status === 'unprocessed' ? 'processed' : r.status
-        await sb
-          .from('orders')
-          .update({ status: nextStatus, print_count: Number(r.print_count || 0) + 1 })
-          .eq('id', r.id)
+    const actor = String(body.performedBy || 'Kitchen Printer').trim()
+
+    for (const id of ids) {
+      const [rows] = await pool.query<any[]>('SELECT * FROM orders WHERE id = ? LIMIT 1', [id])
+      const ord = rows?.[0]
+      if (!ord) continue
+      const nextStatus = ord.status === 'unprocessed' ? 'processed' : ord.status
+      await pool.execute(
+        'UPDATE orders SET status = ?, print_count = print_count + 1 WHERE id = ?',
+        [nextStatus, ord.id]
+      )
+      if (nextStatus === 'processed') {
+        await syncTableSeatingRow(pool, Number(ord.table_number), Number(ord.seat_number), ord.id, 'processed')
       }
+      await pool.execute(
+        `INSERT INTO delivery_audit_logs (order_id, qr_token, guest_name, table_no, seat_no, dish_name, action, performed_by, performed_role)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'vendor')`,
+        [
+          ord.id,
+          ord.qr_token || ord.id,
+          ord.guest_name,
+          ord.table_no,
+          ord.seat_no,
+          ord.dish_name,
+          Number(ord.print_count) > 0 ? 'reprint_receipt' : 'print_receipt',
+          actor
+        ]
+      )
     }
 
-    db.exec('BEGIN IMMEDIATE')
-    try {
-      const stmt = db.prepare(`
-        UPDATE orders
-        SET status = CASE WHEN status = 'unprocessed' THEN 'processed' ELSE status END,
-            print_count = print_count + 1
-        WHERE id = ?
-      `)
-      for (const id of ids) stmt.run(id)
-      db.exec('COMMIT')
-    } catch (err) {
-      db.exec('ROLLBACK')
-      throw err
-    }
-
-    if (sb) {
-      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
-      const state = await fetchEventStateFromSupabase()
-      if (state) return { ok: true, updated: ids, state }
-    }
-    return { ok: true, updated: ids, state: getFullEventState() }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
-  const { orderId, status, printTicket } = body
-  const { getSupabase } = await import('../utils/supabase')
-  const sb = getSupabase()
-
-  if (sb) {
-    const { data: sbRows } = await sb.from('orders').select('*').eq('id', orderId).limit(1)
-    if (sbRows && sbRows.length > 0) {
-      const sbOrd = sbRows[0]
-      let nextStatus = sbOrd.status
-      let nextPrintCount = Number(sbOrd.print_count || 0)
-
-      if (status && ['unprocessed', 'processed', 'delivered'].includes(status)) {
-        nextStatus = status
-      }
-      if (printTicket) {
-        if (nextStatus === 'unprocessed') {
-          nextStatus = 'processed'
-        }
-        nextPrintCount += 1
-      }
-
-      await sb
-        .from('orders')
-        .update({ status: nextStatus, print_count: nextPrintCount })
-        .eq('id', orderId)
-
-      // Also mirror to local SQLite if present
-      db.prepare('UPDATE orders SET status = ?, print_count = ? WHERE id = ?').run(nextStatus, nextPrintCount, orderId)
-
-      const { fetchEventStateFromSupabase } = await import('../utils/supabaseService')
-      const state = await fetchEventStateFromSupabase()
-      return {
-        ok: true,
-        orderId,
-        status: nextStatus,
-        printCount: nextPrintCount,
-        state: state || getFullEventState()
-      }
-    }
+  // 4. Single Order Print / Status Update
+  const orderId = String(body.orderId || '').trim()
+  if (!orderId) {
+    throw createError({ statusCode: 400, statusMessage: 'orderId is required' })
   }
 
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any
-  if (!order) {
+  const [rows] = await pool.query<any[]>('SELECT * FROM orders WHERE id = ? LIMIT 1', [orderId])
+  const ord = rows?.[0]
+  if (!ord) {
     throw createError({ statusCode: 404, statusMessage: 'Order not found' })
   }
 
-  let nextStatus = order.status
-  let nextPrintCount = Number(order.print_count || 0)
+  const actor = String(body.performedBy || body.serverName || 'Kitchen Staff').trim()
 
-  if (status && ['unprocessed', 'processed', 'delivered'].includes(status)) {
-    nextStatus = status
-  }
-  if (printTicket) {
-    if (nextStatus === 'unprocessed') {
-      nextStatus = 'processed'
+  if (body.action === 'print') {
+    const nextStatus = ord.status === 'unprocessed' ? 'processed' : ord.status
+    await pool.execute(
+      'UPDATE orders SET status = ?, print_count = print_count + 1 WHERE id = ?',
+      [nextStatus, ord.id]
+    )
+    if (nextStatus === 'processed') {
+      await syncTableSeatingRow(pool, Number(ord.table_number), Number(ord.seat_number), ord.id, 'processed')
     }
-    nextPrintCount += 1
+    await pool.execute(
+      `INSERT INTO delivery_audit_logs (order_id, qr_token, guest_name, table_no, seat_no, dish_name, action, performed_by, performed_role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'vendor')`,
+      [
+        ord.id,
+        ord.qr_token || ord.id,
+        ord.guest_name,
+        ord.table_no,
+        ord.seat_no,
+        ord.dish_name,
+        Number(ord.print_count) > 0 ? 'reprint_receipt' : 'print_receipt',
+        actor
+      ]
+    )
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
 
-  db.prepare('UPDATE orders SET status = ?, print_count = ? WHERE id = ?').run(nextStatus, nextPrintCount, orderId)
-
-  return {
-    ok: true,
-    order: { id: orderId, status: nextStatus, printCount: nextPrintCount },
-    state: getFullEventState()
+  if (body.status && ['unprocessed', 'processed', 'delivered'].includes(body.status)) {
+    const nextStatus = body.status as 'unprocessed' | 'processed' | 'delivered'
+    if (nextStatus === 'delivered') {
+      await pool.execute(
+        "UPDATE orders SET status = 'delivered', served_by = ?, served_at = NOW() WHERE id = ?",
+        [actor, ord.id]
+      )
+      await syncTableSeatingRow(pool, Number(ord.table_number), Number(ord.seat_number), ord.id, 'served')
+      await pool.execute(
+        `INSERT INTO delivery_audit_logs (order_id, qr_token, guest_name, table_no, seat_no, dish_name, action, performed_by, performed_role)
+         VALUES (?, ?, ?, ?, ?, ?, 'manual_mark_served', ?, 'admin')`,
+        [ord.id, ord.qr_token || ord.id, ord.guest_name, ord.table_no, ord.seat_no, ord.dish_name, actor]
+      )
+    } else {
+      await pool.execute('UPDATE orders SET status = ? WHERE id = ?', [nextStatus, ord.id])
+      await syncTableSeatingRow(
+        pool,
+        Number(ord.table_number),
+        Number(ord.seat_number),
+        ord.id,
+        nextStatus === 'processed' ? 'processed' : 'ordered'
+      )
+    }
+    return { ok: true, state: await getFullEventStateFromMysql() }
   }
+
+  throw createError({ statusCode: 400, statusMessage: 'Invalid order update action' })
 })

@@ -10,25 +10,25 @@
       class="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 cursor-pointer select-none transition-colors"
       :class="isDark ? 'bg-[#090d16]' : 'bg-white'"
       role="status"
-      aria-label="Renaissance Event Platform Loading"
+      aria-label="RenGala Event Platform Loading"
     >
       <div class="relative flex flex-col items-center justify-center max-w-md w-full">
         <!-- Soft radial glow behind logo (no CSS blur filter to avoid iOS Safari black tile glitch) -->
         <div
-          class="absolute w-64 h-64 rounded-full pointer-events-none opacity-60"
-          style="background: radial-gradient(circle, rgba(16,185,129,0.14) 0%, rgba(249,115,22,0.10) 45%, transparent 70%);"
+          class="absolute w-72 h-72 rounded-full pointer-events-none opacity-75"
+          style="background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, rgba(249,115,22,0.12) 48%, transparent 72%);"
         ></div>
 
-        <!-- Clean Official Renaissance Logo (Light / Dark) -->
-        <div class="relative z-10">
+        <!-- Clean Official RenGala Logo (Light / Dark Vector SVG) -->
+        <div class="relative z-10 px-4">
           <img
-            :src="isDark ? '/images/brand/renaissance-logo-dark.jpg' : '/images/brand/renaissance-logo-light.jpg'"
-            alt="Renaissance"
-            class="w-72 sm:w-96 h-auto object-contain rounded-2xl mx-auto"
+            :src="isDark ? '/images/svg/rengala-dark.svg' : '/images/svg/rengala-light.svg'"
+            alt="RenGala"
+            class="w-72 sm:w-96 h-auto object-contain mx-auto"
           />
         </div>
 
-        <!-- Renaissance 4-Color Progress Bar (Guaranteed Left-to-Right Fill + Gradient Sweep) -->
+        <!-- RenGala 4-Color Progress Bar (Guaranteed Left-to-Right Fill + Gradient Sweep) -->
         <div class="relative z-10 mt-6 w-52 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
           <div class="splash-gradient-bar h-full rounded-full"></div>
         </div>
@@ -64,7 +64,7 @@ onMounted(() => {
   }
   t1 = setTimeout(() => {
     dismiss()
-  }, 3000)
+  }, 2500)
 })
 
 onBeforeUnmount(() => {
@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
   width: 0%;
   background: linear-gradient(90deg, #008751 0%, #f97316 25%, #facc15 50%, #dc2626 75%, #008751 100%);
   background-size: 200% 100%;
-  animation: splashFill 3s cubic-bezier(0.22, 1, 0.36, 1) forwards, gradientSweep 1.6s linear infinite;
+  animation: splashFill 2.5s cubic-bezier(0.22, 1, 0.36, 1) forwards, gradientSweep 1.6s linear infinite;
 }
 
 @keyframes splashFill {
