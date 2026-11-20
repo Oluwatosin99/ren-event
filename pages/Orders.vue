@@ -890,13 +890,13 @@
 
             <div class="space-y-1.5">
               <h3 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                Table &amp; Seat Already Ordered
+                Seat Order Limit Reached
               </h3>
               <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-300 text-xs font-extrabold">
                 <span>{{ duplicateSeatModal.table }} • {{ duplicateSeatModal.seat }}</span>
               </div>
               <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed pt-1">
-                Someone has already placed an order with these credentials (<strong>{{ duplicateSeatModal.table }}</strong> &amp; <strong>{{ duplicateSeatModal.seat }}</strong>).
+                The maximum limit of <strong>2 orders</strong> has already been placed for <strong>{{ duplicateSeatModal.table }}</strong> &amp; <strong>{{ duplicateSeatModal.seat }}</strong>.
                 Kindly cross-check your Table Number and Seat Number and try again. Thank you, and enjoy the event!
               </p>
             </div>

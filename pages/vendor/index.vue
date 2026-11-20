@@ -637,7 +637,12 @@ const resetFilters = () => {
 
 const triggerPhysicalPrint = async (orderId: string) => {
   selectedOrderId.value = orderId
-  await updateOrderStatus({ orderId, printTicket: true })
+  await updateOrderStatus({
+    orderId,
+    action: 'print',
+    printTicket: true,
+    performedBy: userSession.value?.name || 'Kitchen Staff'
+  })
   if (import.meta.client) {
     setTimeout(() => {
       window.print()

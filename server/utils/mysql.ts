@@ -23,13 +23,48 @@ export function getMysqlPool(): mysql.Pool {
     user: cfg.user,
     password: cfg.password,
     database: cfg.database,
+    multipleStatements: true,
     waitForConnections: true,
-    connectionLimit: 15,
+    connectionLimit: 5,
+    maxIdle: 2,
+    idleTimeout: 30000,
     queueLimit: 0,
+    connectTimeout: 10000,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 0
+    keepAliveInitialDelay: 10000
   })
   return _pool
+}
+
+function isTransientMysqlError(err: any): boolean {
+  const code = String(err?.code || '')
+  return (
+    code === 'ECONNRESET' ||
+    code === 'PROTOCOL_CONNECTION_LOST' ||
+    code === 'EPIPE' ||
+    code === 'ETIMEDOUT' ||
+    code === 'ECONNREFUSED'
+  )
+}
+
+async function resetMysqlPool() {
+  if (_pool) {
+    const old = _pool
+    _pool = null
+    try { await old.end() } catch {}
+  }
+}
+
+export async function withMysqlRetry<T>(fn: (pool: mysql.Pool) => Promise<T>): Promise<T> {
+  try {
+    return await fn(getMysqlPool())
+  } catch (err: any) {
+    if (isTransientMysqlError(err)) {
+      await resetMysqlPool()
+      return await fn(getMysqlPool())
+    }
+    throw err
+  }
 }
 
 export function getQuadForTable(tableNumber: number): 'A' | 'B' | 'C' | 'D' {
@@ -78,22 +113,36 @@ export async function syncTableSeatingRow(
   )
 }
 
-export async function getFullEventStateFromMysql(): Promise<EventState> {
-  const pool = getMysqlPool()
+let _cachedState: EventState | null = null
+let _cachedStateAt = 0
+const STATE_CACHE_TTL_MS = 2000
 
-  const [
-    [settingsRows],
-    [menuRows],
-    [orderRows],
-    [regRows],
-    [userRows]
-  ] = await Promise.all([
-    pool.query<any[]>('SELECT setting_key, setting_value FROM event_settings'),
-    pool.query<any[]>('SELECT * FROM menus ORDER BY updated_at DESC, id ASC'),
-    pool.query<any[]>('SELECT * FROM orders ORDER BY created_at DESC'),
-    pool.query<any[]>('SELECT * FROM registered_guests ORDER BY admitted_at DESC, created_at DESC LIMIT 1000'),
-    pool.query<any[]>('SELECT id, name, username, password, role, department, created_at FROM users ORDER BY id ASC')
-  ])
+export function invalidateMysqlStateCache() {
+  _cachedState = null
+  _cachedStateAt = 0
+}
+
+export async function getFullEventStateFromMysql(useCache = false): Promise<EventState> {
+  if (useCache && _cachedState && Date.now() - _cachedStateAt < STATE_CACHE_TTL_MS) {
+    return _cachedState
+  }
+
+  const startMs = Date.now()
+  const [results] = await withMysqlRetry(async (pool) => {
+    return await pool.query<any[]>(
+      `SELECT setting_key, setting_value FROM event_settings;
+       SELECT * FROM menus ORDER BY updated_at DESC, id ASC;
+       SELECT * FROM orders ORDER BY created_at DESC;
+       SELECT * FROM registered_guests ORDER BY admitted_at DESC, created_at DESC LIMIT 1000;
+       SELECT id, name, username, password, role, department, created_at FROM users ORDER BY id ASC;`
+    )
+  })
+
+  const settingsRows = (results?.[0] || []) as any[]
+  const menuRows = (results?.[1] || []) as any[]
+  const orderRows = (results?.[2] || []) as any[]
+  const regRows = (results?.[3] || []) as any[]
+  const userRows = (results?.[4] || []) as any[]
 
   const settings: Record<string, string> = {}
   for (const r of settingsRows || []) {
@@ -166,7 +215,7 @@ export async function getFullEventStateFromMysql(): Promise<EventState> {
     created_at: u.created_at ? new Date(u.created_at).getTime() : Date.now()
   }))
 
-  return {
+  const state: EventState = {
     capacity: {
       totalExpected: Number(settings.total_expected || 2000),
       totalTables: Number(settings.total_tables || 200),
@@ -181,8 +230,12 @@ export async function getFullEventStateFromMysql(): Promise<EventState> {
     attendees,
     users,
     metrics: {
-      avgResponseMs: 12,
+      avgResponseMs: Math.max(1, Date.now() - startMs),
       totalProcessedLockOps: orders.length
     }
   }
+
+  _cachedState = state
+  _cachedStateAt = Date.now()
+  return state
 }

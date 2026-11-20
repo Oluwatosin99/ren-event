@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_orders_table_seat` (`table_number`, `seat_number`),
+  INDEX `idx_orders_table_seat` (`table_number`, `seat_number`),
   UNIQUE KEY `uq_orders_qr_token` (`qr_token`),
   INDEX `idx_orders_status` (`status`),
   INDEX `idx_orders_served_by` (`served_by`)

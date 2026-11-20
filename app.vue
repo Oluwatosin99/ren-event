@@ -152,7 +152,7 @@ onMounted(async () => {
   await fetchState()
   pollTimer = setInterval(() => {
     fetchState()
-  }, 4000)
+  }, 8000)
 })
 
 onUnmounted(() => {

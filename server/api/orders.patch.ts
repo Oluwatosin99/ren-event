@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
 
   const actor = String(body.performedBy || body.serverName || 'Kitchen Staff').trim()
 
-  if (body.action === 'print') {
+  if (body.action === 'print' || body.printTicket === true) {
     const nextStatus = ord.status === 'unprocessed' ? 'processed' : ord.status
     await pool.execute(
       'UPDATE orders SET status = ?, print_count = print_count + 1 WHERE id = ?',

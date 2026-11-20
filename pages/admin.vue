@@ -389,28 +389,21 @@
         </div>
       </div>
 
-      <!-- Summary / Sum Block -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- Summary / Sum Block: Admitted, Pending & Scanner Personnel -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Total Admitted</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Admitted</div>
           <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
             {{ admittedAttendees.length }}
           </div>
-          <div class="text-[10px] text-slate-400">Gate Verified Attendees</div>
+          <div class="text-[10px] text-slate-400">{{ vipAdmittedCount }} VIP • {{ nonVipAdmittedCount }} Non-VIP</div>
         </div>
         <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">VIP Admitted</div>
-          <div class="text-2xl font-black text-yellow-600 dark:text-yellow-400 font-mono mt-0.5">
-            {{ vipAdmittedCount }}
-          </div>
-          <div class="text-[10px] text-slate-400">VIP Tier Guests</div>
-        </div>
-        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Non-VIP Admitted</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Pending</div>
           <div class="text-2xl font-black text-orange-600 dark:text-orange-400 font-mono mt-0.5">
-            {{ nonVipAdmittedCount }}
+            {{ pendingAttendeesCount }}
           </div>
-          <div class="text-[10px] text-slate-400">Regular / On-Site / Plus-One</div>
+          <div class="text-[10px] text-slate-400">Registered • Awaiting Gate Scan</div>
         </div>
         <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
           <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Scanner Personnel</div>
@@ -1200,6 +1193,10 @@ const admittedAttendees = computed(() => {
   return (eventState.value?.attendees || []).filter(a => a.checkedIn)
 })
 
+const pendingAttendeesCount = computed(() => {
+  return (eventState.value?.attendees || []).filter(a => !a.checkedIn).length
+})
+
 const vipAdmittedCount = computed(() => {
   return admittedAttendees.value.filter(a => a.isVip || a.type === 'VIP').length
 })
@@ -1293,51 +1290,58 @@ const matrixTables = computed(() => {
 })
 
 const orderLookupMap = computed(() => {
-  const map = new Map<string, any>()
+  const map = new Map<string, any[]>()
   for (const o of allOrders.value) {
     const tNum = o.table.replace(/\D/g, '')
     const sNum = o.seat.replace(/\D/g, '')
-    map.set(`${tNum}-${sNum}`, o)
+    const key = `${tNum}-${sNum}`
+    const list = map.get(key) || []
+    list.push(o)
+    map.set(key, list)
   }
   return map
 })
 
-const getSeatOrder = (tableNum: number, seatNum: number) => {
-  return orderLookupMap.value.get(`${tableNum}-${seatNum}`)
+const getSeatOrders = (tableNum: number, seatNum: number) => {
+  return orderLookupMap.value.get(`${tableNum}-${seatNum}`) || []
 }
 
 const getSeatCellClass = (tableNum: number, seatNum: number) => {
-  const ord = getSeatOrder(tableNum, seatNum)
-  if (!ord) return 'bg-slate-50 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 border border-slate-200 dark:border-slate-800'
-  if (ord.status === 'delivered') {
+  const list = getSeatOrders(tableNum, seatNum)
+  if (!list.length) return 'bg-slate-50 dark:bg-slate-800/40 text-slate-300 dark:text-slate-600 border border-slate-200 dark:border-slate-800'
+  if (list.every(o => o.status === 'delivered')) {
     return 'bg-emerald-600 text-white font-black shadow-sm'
   }
-  if (ord.status === 'processed') {
+  if (list.some(o => o.status === 'processed' || o.status === 'delivered')) {
     return 'bg-yellow-400 text-slate-950 font-black shadow-sm'
   }
   return 'bg-red-600 text-white font-black shadow-sm'
 }
 
 const getSeatCellLabel = (tableNum: number, seatNum: number) => {
-  const ord = getSeatOrder(tableNum, seatNum)
-  if (!ord) return ''
-  if (ord.status === 'delivered') return 'Served'
-  if (ord.status === 'processed') return 'Printed'
-  return 'Ordered'
+  const list = getSeatOrders(tableNum, seatNum)
+  if (!list.length) return ''
+  const suffix = list.length > 1 ? ` (${list.length})` : ''
+  if (list.every(o => o.status === 'delivered')) return `Served${suffix}`
+  if (list.some(o => o.status === 'processed' || o.status === 'delivered')) return `Printed${suffix}`
+  return `Ordered${suffix}`
 }
 
 const getSeatCellShortLabel = (tableNum: number, seatNum: number) => {
-  const ord = getSeatOrder(tableNum, seatNum)
-  if (!ord) return ''
-  if (ord.status === 'delivered') return 'S'
-  if (ord.status === 'processed') return 'P'
-  return 'O'
+  const list = getSeatOrders(tableNum, seatNum)
+  if (!list.length) return ''
+  const suffix = list.length > 1 ? String(list.length) : ''
+  if (list.every(o => o.status === 'delivered')) return `S${suffix}`
+  if (list.some(o => o.status === 'processed' || o.status === 'delivered')) return `P${suffix}`
+  return `O${suffix}`
 }
 
 const getSeatTooltip = (tableNum: number, seatNum: number) => {
-  const ord = getSeatOrder(tableNum, seatNum)
-  if (!ord) return `Table ${tableNum} • Seat ${seatNum}: No order placed yet`
-  return `Table ${tableNum} • Seat ${seatNum}: ${ord.guest} (${ord.dish}) [${ord.status.toUpperCase()}]`
+  const list = getSeatOrders(tableNum, seatNum)
+  if (!list.length) return `Table ${tableNum} • Seat ${seatNum}: No order placed yet`
+  return list
+    .map((ord, idx) => `#${idx + 1} (${ord.id}): ${ord.guest} — ${ord.dish} [${ord.status.toUpperCase()}]`)
+    .join(' | ')
 }
 
 // Backend Summary: 100% Real Data from Delivery Personnel (`users` with role='delivery') & live `orders`
